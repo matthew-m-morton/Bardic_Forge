@@ -46,3 +46,7 @@ temp/
 # User settings and data
 user-data/
 settings.json
+
+# Test files
+test-data/
+test-db-init.js

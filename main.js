@@ -44,21 +44,37 @@ function createWindow() {
 }
 
 // Initialize app
-app.whenReady().then(() => {
-  // Create music folder if it doesn't exist
-  const musicFolder = path.join(__dirname, 'music');
-  if (!fs.existsSync(musicFolder)) {
-    fs.mkdirSync(musicFolder, { recursive: true });
-    fs.writeFileSync(path.join(musicFolder, '.gitkeep'), '');
-  }
-
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+app.whenReady().then(async () => {
+  try {
+    // Create music folder if it doesn't exist
+    const musicFolder = path.join(__dirname, 'music');
+    if (!fs.existsSync(musicFolder)) {
+      fs.mkdirSync(musicFolder, { recursive: true });
+      fs.writeFileSync(path.join(musicFolder, '.gitkeep'), '');
     }
-  });
+
+    // Initialize database BEFORE creating window
+    const userDataPath = app.getPath('userData');
+    console.log('Initializing database at:', userDataPath);
+    const dbResult = db.initDatabase(userDataPath);
+
+    if (!dbResult.success) {
+      console.error('❌ Database failed to initialize:', dbResult.error);
+    } else {
+      console.log('✅ Database initialized successfully at:', dbResult.path);
+    }
+
+    // Now create the window
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  } catch (error) {
+    console.error('❌ App initialization failed:', error);
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -148,12 +164,6 @@ ipcMain.handle('fs:stats', async (event, filePath) => {
 
 // Database handlers
 const db = require('./src/database/db');
-
-// Initialize database on app start
-app.whenReady().then(async () => {
-  const userDataPath = app.getPath('userData');
-  db.initDatabase(userDataPath);
-});
 
 // Database IPC Handlers
 ipcMain.handle('db:init', async () => {
