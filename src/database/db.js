@@ -1,21 +1,54 @@
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 
 let db = null;
+let dbPath = null;
+
+// Save database to file
+function saveDatabase() {
+  if (db && dbPath) {
+    try {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(dbPath, buffer);
+    } catch (error) {
+      console.error('Error saving database:', error);
+    }
+  }
+}
 
 // Initialize database
-function initDatabase(appPath) {
+async function initDatabase(appPath) {
   try {
-    const dbPath = path.join(appPath, 'bardic_forge.db');
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better performance
-    
+    dbPath = path.join(appPath, 'bardic_forge.db');
+
+    // Ensure directory exists
+    if (!fs.existsSync(appPath)) {
+      fs.mkdirSync(appPath, { recursive: true });
+    }
+
+    // Initialize sql.js
+    const SQL = await initSqlJs();
+
+    // Load existing database or create new one
+    if (fs.existsSync(dbPath)) {
+      const buffer = fs.readFileSync(dbPath);
+      db = new SQL.Database(buffer);
+      console.log('Loaded existing database from:', dbPath);
+    } else {
+      db = new SQL.Database();
+      console.log('Created new database at:', dbPath);
+    }
+
     // Read and execute schema
     const schemaPath = path.join(__dirname, 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     db.exec(schema);
-    
+
+    // Save the database
+    saveDatabase();
+
     console.log('Database initialized successfully at:', dbPath);
     return { success: true, path: dbPath };
   } catch (error) {
@@ -29,29 +62,36 @@ function getAllSongs(filters = {}) {
   try {
     let query = 'SELECT * FROM songs';
     const conditions = [];
-    const params = [];
-    
+    const params = {};
+
     if (filters.artist) {
-      conditions.push('artist LIKE ?');
-      params.push(`%${filters.artist}%`);
+      conditions.push('artist LIKE :artist');
+      params[':artist'] = `%${filters.artist}%`;
     }
     if (filters.album) {
-      conditions.push('album LIKE ?');
-      params.push(`%${filters.album}%`);
+      conditions.push('album LIKE :album');
+      params[':album'] = `%${filters.album}%`;
     }
     if (filters.genre) {
-      conditions.push('genre LIKE ?');
-      params.push(`%${filters.genre}%`);
+      conditions.push('genre LIKE :genre');
+      params[':genre'] = `%${filters.genre}%`;
     }
-    
+
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
-    
+
     query += ' ORDER BY title ASC';
-    
+
     const stmt = db.prepare(query);
-    const songs = stmt.all(...params);
+    stmt.bind(params);
+
+    const songs = [];
+    while (stmt.step()) {
+      songs.push(stmt.getAsObject());
+    }
+    stmt.free();
+
     return { success: true, songs };
   } catch (error) {
     console.error('Error getting songs:', error);
@@ -61,8 +101,15 @@ function getAllSongs(filters = {}) {
 
 function getSongById(songId) {
   try {
-    const stmt = db.prepare('SELECT * FROM songs WHERE song_id = ?');
-    const song = stmt.get(songId);
+    const stmt = db.prepare('SELECT * FROM songs WHERE song_id = :id');
+    stmt.bind({ ':id': songId });
+
+    let song = null;
+    if (stmt.step()) {
+      song = stmt.getAsObject();
+    }
+    stmt.free();
+
     return { success: true, song };
   } catch (error) {
     console.error('Error getting song:', error);
@@ -79,8 +126,8 @@ function addSong(song) {
         track_number, year, genre
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
-    const info = stmt.run(
+
+    stmt.run([
       song.song_id,
       song.file_path,
       song.original_file_path || null,
@@ -93,9 +140,11 @@ function addSong(song) {
       song.track_number || null,
       song.year || null,
       song.genre || null
-    );
-    
-    return { success: true, changes: info.changes };
+    ]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error adding song:', error);
     return { success: false, error: error.message };
@@ -106,15 +155,18 @@ function updateSong(songId, updates) {
   try {
     const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
     const values = Object.values(updates);
-    
+
     const stmt = db.prepare(`
-      UPDATE songs 
-      SET ${fields}, date_modified = CURRENT_TIMESTAMP 
+      UPDATE songs
+      SET ${fields}, date_modified = CURRENT_TIMESTAMP
       WHERE song_id = ?
     `);
-    
-    const info = stmt.run(...values, songId);
-    return { success: true, changes: info.changes };
+
+    stmt.run([...values, songId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error updating song:', error);
     return { success: false, error: error.message };
@@ -124,8 +176,11 @@ function updateSong(songId, updates) {
 function deleteSong(songId) {
   try {
     const stmt = db.prepare('DELETE FROM songs WHERE song_id = ?');
-    const info = stmt.run(songId);
-    return { success: true, changes: info.changes };
+    stmt.run([songId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error deleting song:', error);
     return { success: false, error: error.message };
@@ -136,7 +191,13 @@ function deleteSong(songId) {
 function getAllPlaylists() {
   try {
     const stmt = db.prepare('SELECT * FROM playlists ORDER BY playlist_name ASC');
-    const playlists = stmt.all();
+
+    const playlists = [];
+    while (stmt.step()) {
+      playlists.push(stmt.getAsObject());
+    }
+    stmt.free();
+
     return { success: true, playlists };
   } catch (error) {
     console.error('Error getting playlists:', error);
@@ -147,7 +208,14 @@ function getAllPlaylists() {
 function getPlaylistById(playlistId) {
   try {
     const stmt = db.prepare('SELECT * FROM playlists WHERE playlist_id = ?');
-    const playlist = stmt.get(playlistId);
+    stmt.bind([playlistId]);
+
+    let playlist = null;
+    if (stmt.step()) {
+      playlist = stmt.getAsObject();
+    }
+    stmt.free();
+
     return { success: true, playlist };
   } catch (error) {
     console.error('Error getting playlist:', error);
@@ -158,8 +226,17 @@ function getPlaylistById(playlistId) {
 function createPlaylist(name) {
   try {
     const stmt = db.prepare('INSERT INTO playlists (playlist_name) VALUES (?)');
-    const info = stmt.run(name);
-    return { success: true, playlistId: info.lastInsertRowid };
+    stmt.run([name]);
+    stmt.free();
+
+    // Get the last inserted ID
+    const idStmt = db.prepare('SELECT last_insert_rowid() as id');
+    idStmt.step();
+    const result = idStmt.getAsObject();
+    idStmt.free();
+
+    saveDatabase();
+    return { success: true, playlistId: result.id };
   } catch (error) {
     console.error('Error creating playlist:', error);
     return { success: false, error: error.message };
@@ -170,15 +247,18 @@ function updatePlaylist(playlistId, updates) {
   try {
     const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
     const values = Object.values(updates);
-    
+
     const stmt = db.prepare(`
-      UPDATE playlists 
-      SET ${fields}, date_modified = CURRENT_TIMESTAMP 
+      UPDATE playlists
+      SET ${fields}, date_modified = CURRENT_TIMESTAMP
       WHERE playlist_id = ?
     `);
-    
-    const info = stmt.run(...values, playlistId);
-    return { success: true, changes: info.changes };
+
+    stmt.run([...values, playlistId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error updating playlist:', error);
     return { success: false, error: error.message };
@@ -188,8 +268,11 @@ function updatePlaylist(playlistId, updates) {
 function deletePlaylist(playlistId) {
   try {
     const stmt = db.prepare('DELETE FROM playlists WHERE playlist_id = ?');
-    const info = stmt.run(playlistId);
-    return { success: true, changes: info.changes };
+    stmt.run([playlistId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error deleting playlist:', error);
     return { success: false, error: error.message };
@@ -201,15 +284,22 @@ function addSongToPlaylist(playlistId, songId) {
   try {
     // Get the next position
     const posStmt = db.prepare('SELECT MAX(position) as maxPos FROM playlist_songs WHERE playlist_id = ?');
-    const result = posStmt.get(playlistId);
+    posStmt.bind([playlistId]);
+    posStmt.step();
+    const result = posStmt.getAsObject();
+    posStmt.free();
+
     const nextPosition = (result.maxPos || 0) + 1;
-    
+
     const stmt = db.prepare(`
-      INSERT INTO playlist_songs (playlist_id, song_id, position) 
+      INSERT INTO playlist_songs (playlist_id, song_id, position)
       VALUES (?, ?, ?)
     `);
-    const info = stmt.run(playlistId, songId, nextPosition);
-    return { success: true, changes: info.changes };
+    stmt.run([playlistId, songId, nextPosition]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error adding song to playlist:', error);
     return { success: false, error: error.message };
@@ -219,19 +309,11 @@ function addSongToPlaylist(playlistId, songId) {
 function removeSongFromPlaylist(playlistId, songId) {
   try {
     const stmt = db.prepare('DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?');
-    const info = stmt.run(playlistId, songId);
-    
-    // Reorder remaining songs
-    const reorderStmt = db.prepare(`
-      UPDATE playlist_songs 
-      SET position = position - 1 
-      WHERE playlist_id = ? AND position > (
-        SELECT position FROM playlist_songs WHERE playlist_id = ? AND song_id = ?
-      )
-    `);
-    reorderStmt.run(playlistId, playlistId, songId);
-    
-    return { success: true, changes: info.changes };
+    stmt.run([playlistId, songId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error removing song from playlist:', error);
     return { success: false, error: error.message };
@@ -241,13 +323,20 @@ function removeSongFromPlaylist(playlistId, songId) {
 function getPlaylistSongs(playlistId) {
   try {
     const stmt = db.prepare(`
-      SELECT s.*, ps.position 
+      SELECT s.*, ps.position
       FROM songs s
       JOIN playlist_songs ps ON s.song_id = ps.song_id
       WHERE ps.playlist_id = ?
       ORDER BY ps.position ASC
     `);
-    const songs = stmt.all(playlistId);
+    stmt.bind([playlistId]);
+
+    const songs = [];
+    while (stmt.step()) {
+      songs.push(stmt.getAsObject());
+    }
+    stmt.free();
+
     return { success: true, songs };
   } catch (error) {
     console.error('Error getting playlist songs:', error);
@@ -259,12 +348,19 @@ function getPlaylistSongs(playlistId) {
 function searchSongs(query) {
   try {
     const stmt = db.prepare(`
-      SELECT * FROM songs 
+      SELECT * FROM songs
       WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?
       ORDER BY title ASC
     `);
     const searchTerm = `%${query}%`;
-    const songs = stmt.all(searchTerm, searchTerm, searchTerm);
+    stmt.bind([searchTerm, searchTerm, searchTerm]);
+
+    const songs = [];
+    while (stmt.step()) {
+      songs.push(stmt.getAsObject());
+    }
+    stmt.free();
+
     return { success: true, songs };
   } catch (error) {
     console.error('Error searching songs:', error);
@@ -281,7 +377,13 @@ function findDuplicates() {
       HAVING count > 1
       ORDER BY title ASC
     `);
-    const duplicates = stmt.all();
+
+    const duplicates = [];
+    while (stmt.step()) {
+      duplicates.push(stmt.getAsObject());
+    }
+    stmt.free();
+
     return { success: true, duplicates };
   } catch (error) {
     console.error('Error finding duplicates:', error);
@@ -293,8 +395,16 @@ function findDuplicates() {
 function getSetting(key) {
   try {
     const stmt = db.prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
-    const result = stmt.get(key);
-    return { success: true, value: result ? result.setting_value : null };
+    stmt.bind([key]);
+
+    let value = null;
+    if (stmt.step()) {
+      const result = stmt.getAsObject();
+      value = result.setting_value;
+    }
+    stmt.free();
+
+    return { success: true, value };
   } catch (error) {
     console.error('Error getting setting:', error);
     return { success: false, error: error.message };
@@ -304,12 +414,15 @@ function getSetting(key) {
 function setSetting(key, value) {
   try {
     const stmt = db.prepare(`
-      INSERT INTO settings (setting_key, setting_value) 
+      INSERT INTO settings (setting_key, setting_value)
       VALUES (?, ?)
       ON CONFLICT(setting_key) DO UPDATE SET setting_value = ?
     `);
-    const info = stmt.run(key, value, value);
-    return { success: true, changes: info.changes };
+    stmt.run([key, value, value]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true, changes: 1 };
   } catch (error) {
     console.error('Error setting setting:', error);
     return { success: false, error: error.message };
@@ -319,7 +432,9 @@ function setSetting(key, value) {
 // Close database
 function closeDatabase() {
   if (db) {
+    saveDatabase();
     db.close();
+    db = null;
     console.log('Database closed');
   }
 }

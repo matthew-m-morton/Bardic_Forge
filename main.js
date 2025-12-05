@@ -56,7 +56,7 @@ app.whenReady().then(async () => {
     // Initialize database BEFORE creating window
     const userDataPath = app.getPath('userData');
     console.log('Initializing database at:', userDataPath);
-    const dbResult = db.initDatabase(userDataPath);
+    const dbResult = await db.initDatabase(userDataPath);
 
     if (!dbResult.success) {
       console.error('❌ Database failed to initialize:', dbResult.error);
@@ -168,7 +168,7 @@ const db = require('./src/database/db');
 // Database IPC Handlers
 ipcMain.handle('db:init', async () => {
   const userDataPath = app.getPath('userData');
-  return db.initDatabase(userDataPath);
+  return await db.initDatabase(userDataPath);
 });
 
 ipcMain.handle('db:getSongs', async (event, filters) => {
