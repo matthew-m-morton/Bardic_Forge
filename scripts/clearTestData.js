@@ -4,12 +4,25 @@
  * Run with: node scripts/clearTestData.js
  */
 
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
 const readline = require('readline');
 
-const DB_PATH = path.join(process.env.APPDATA || process.env.HOME, 'bardic_forge', 'bardic_forge.db');
+// Determine userData directory based on OS
+function getUserDataPath() {
+  const appName = 'bardic_forge';
+
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA, appName);
+  } else if (process.platform === 'darwin') {
+    return path.join(process.env.HOME, 'Library', 'Application Support', appName);
+  } else {
+    return path.join(process.env.HOME, '.config', appName);
+  }
+}
+
+const DB_PATH = path.join(getUserDataPath(), 'bardic_forge.db');
 
 console.log('Database path:', DB_PATH);
 
@@ -23,20 +36,39 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-rl.question('⚠️  This will delete ALL songs and playlists. Are you sure? (yes/no): ', (answer) => {
+rl.question('⚠️  This will delete ALL songs and playlists. Are you sure? (yes/no): ', async (answer) => {
   if (answer.toLowerCase() === 'yes') {
-    const db = new Database(DB_PATH);
-    
     try {
+      // Initialize sql.js
+      const SQL = await initSqlJs();
+
+      // Load database
+      const buffer = fs.readFileSync(DB_PATH);
+      const db = new SQL.Database(buffer);
+
       // Get counts before deletion
-      const songCount = db.prepare('SELECT COUNT(*) as count FROM songs').get().count;
-      const playlistCount = db.prepare('SELECT COUNT(*) as count FROM playlists').get().count;
-      
+      const songStmt = db.prepare('SELECT COUNT(*) as count FROM songs');
+      songStmt.step();
+      const songCount = songStmt.getAsObject().count;
+      songStmt.free();
+
+      const playlistStmt = db.prepare('SELECT COUNT(*) as count FROM playlists');
+      playlistStmt.step();
+      const playlistCount = playlistStmt.getAsObject().count;
+      playlistStmt.free();
+
       // Clear tables
-      db.prepare('DELETE FROM playlist_songs').run();
-      db.prepare('DELETE FROM playlists').run();
-      db.prepare('DELETE FROM songs').run();
-      
+      db.run('DELETE FROM playlist_songs');
+      db.run('DELETE FROM playlists');
+      db.run('DELETE FROM songs');
+
+      // Save database
+      const data = db.export();
+      const outputBuffer = Buffer.from(data);
+      fs.writeFileSync(DB_PATH, outputBuffer);
+
+      db.close();
+
       console.log('\n' + '='.repeat(50));
       console.log('✅ Database cleared successfully!');
       console.log(`   Deleted ${songCount} songs`);
@@ -44,12 +76,10 @@ rl.question('⚠️  This will delete ALL songs and playlists. Are you sure? (ye
       console.log('='.repeat(50));
     } catch (error) {
       console.error('❌ Error clearing database:', error);
-    } finally {
-      db.close();
     }
   } else {
     console.log('Cancelled. No data was deleted.');
   }
-  
+
   rl.close();
 });
