@@ -165,6 +165,9 @@ ipcMain.handle('fs:stats', async (event, filePath) => {
 // Database handlers
 const db = require('./src/database/db');
 
+// Import handler
+const importer = require('./src/audio/importer');
+
 // Database IPC Handlers
 ipcMain.handle('db:init', async () => {
   const userDataPath = app.getPath('userData');
@@ -237,6 +240,28 @@ ipcMain.handle('db:getSetting', async (event, key) => {
 
 ipcMain.handle('db:setSetting', async (event, key, value) => {
   return db.setSetting(key, value);
+});
+
+// Import IPC Handlers
+ipcMain.handle('import:mp3Files', async (event, filePaths, progressCallback) => {
+  try {
+    // Import the files
+    const results = await importer.importMP3Files(filePaths, db, (progress) => {
+      // Send progress updates to renderer
+      if (mainWindow) {
+        mainWindow.webContents.send('import:progress', progress);
+      }
+    });
+
+    return { success: true, results };
+  } catch (error) {
+    console.error('Import error:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('import:getInfo', async (event, filePaths) => {
+  return importer.getImportInfo(filePaths);
 });
 
 // Cleanup on app quit
