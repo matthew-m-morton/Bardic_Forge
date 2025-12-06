@@ -407,11 +407,69 @@ function setupEventListeners() {
 
 // Import files
 async function importFiles() {
-  const files = await window.electronAPI.selectMusicFiles();
-  if (files && files.length > 0) {
-    console.log('Importing files:', files);
-    // TODO: Implement import workflow
-    alert(`Selected ${files.length} files. Import functionality coming soon!`);
+  try {
+    // Select files
+    const files = await window.electronAPI.selectMusicFiles();
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    // Get info about files
+    const info = await window.electronAPI.import.getInfo(files);
+
+    if (!info.canImport) {
+      alert('No MP3 files found in selection. Currently only MP3 files are supported.');
+      return;
+    }
+
+    if (info.unsupportedFiles > 0) {
+      const proceed = confirm(
+        `Found ${info.mp3Files} MP3 file(s) and ${info.unsupportedFiles} unsupported file(s).\n\n` +
+        `Only MP3 files will be imported. Continue?`
+      );
+      if (!proceed) return;
+    }
+
+    // Show progress
+    console.log(`Importing ${info.mp3Files} MP3 file(s)...`);
+
+    // Setup progress listener
+    const progressHandler = (progress) => {
+      if (progress.status === 'processing') {
+        console.log(`[${progress.current}/${progress.total}] Importing: ${progress.file}`);
+      } else if (progress.status === 'complete') {
+        console.log('Import complete!', progress.results);
+      }
+    };
+    window.electronAPI.import.onProgress(progressHandler);
+
+    // Import files
+    const result = await window.electronAPI.import.importMP3Files(info.files);
+
+    // Remove progress listener
+    window.electronAPI.import.removeProgressListener(progressHandler);
+
+    if (result.success) {
+      const res = result.results;
+      alert(
+        `Import Complete!\n\n` +
+        `✅ Imported: ${res.imported}\n` +
+        `⏭️  Skipped (duplicates): ${res.skipped}\n` +
+        `❌ Failed: ${res.failed}`
+      );
+
+      // Reload songs to show newly imported ones
+      await loadSongs();
+
+      // Close settings modal
+      settingsModal.classList.remove('active');
+    } else {
+      alert(`Import failed: ${result.error}`);
+    }
+
+  } catch (error) {
+    console.error('Import error:', error);
+    alert(`Import failed: ${error.message}`);
   }
 }
 

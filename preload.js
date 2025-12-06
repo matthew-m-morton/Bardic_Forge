@@ -54,13 +54,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getDuration: (filePath) => ipcRenderer.invoke('audio:getDuration', filePath)
   },
   
-  // Import APIs (to be implemented)
+  // Import APIs
   import: {
-    importFiles: (filePaths, keepOriginal, bitrate) => ipcRenderer.invoke('import:files', filePaths, keepOriginal, bitrate),
-    scanFolder: (folderPath) => ipcRenderer.invoke('import:scanFolder', folderPath),
+    importMP3Files: (filePaths) => ipcRenderer.invoke('import:mp3Files', filePaths),
+    getInfo: (filePaths) => ipcRenderer.invoke('import:getInfo', filePaths),
     onProgress: (callback) => ipcRenderer.on('import:progress', (event, data) => callback(data)),
-    onComplete: (callback) => ipcRenderer.on('import:complete', (event, data) => callback(data)),
-    onError: (callback) => ipcRenderer.on('import:error', (event, data) => callback(data))
+    removeProgressListener: (callback) => ipcRenderer.removeListener('import:progress', callback)
   }
 });
 
