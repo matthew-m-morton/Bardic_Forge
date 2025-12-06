@@ -636,3 +636,7 @@ form input:focus {
 ::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+::-webkit-scrollbar-corner {
+    background: #1a1a1a;
+}
