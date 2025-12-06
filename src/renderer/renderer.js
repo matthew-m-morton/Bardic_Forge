@@ -293,17 +293,24 @@ function setupPlayerCallbacks() {
   player.onPlay(() => {
     document.getElementById('playBtn').textContent = '⏸';
   });
-  
+
   player.onPause(() => {
     document.getElementById('playBtn').textContent = '▶';
   });
-  
+
   player.onTimeUpdate((data) => {
     document.getElementById('currentTime').textContent = formatDuration(Math.floor(data.currentTime));
     document.getElementById('totalTime').textContent = formatDuration(Math.floor(data.duration));
     document.getElementById('progressBar').value = data.percent || 0;
   });
-  
+
+  player.onLoaded((data) => {
+    // Update now playing display when a new song loads (next/previous buttons)
+    if (player.currentSong) {
+      updateNowPlaying(player.currentSong);
+    }
+  });
+
   player.onEnded(() => {
     console.log('Song ended');
   });
