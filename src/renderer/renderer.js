@@ -65,8 +65,10 @@ async function loadSongs() {
 async function loadPlaylists() {
   try {
     const result = await window.electronAPI.db.getPlaylists();
+    console.log('Load playlists result:', result);
     if (result.success) {
       playlists = result.playlists || [];
+      console.log('Loaded playlists:', playlists);
       renderPlaylists();
     }
   } catch (error) {
@@ -394,9 +396,16 @@ function setupEventListeners() {
   document.getElementById('addPlaylistBtn').addEventListener('click', async () => {
     const name = prompt('Enter playlist name:');
     if (name) {
+      console.log('Creating playlist:', name);
       const result = await window.electronAPI.db.createPlaylist(name);
+      console.log('Create playlist result:', result);
       if (result.success) {
+        console.log('Playlist created successfully, reloading playlists...');
         await loadPlaylists();
+        alert(`Playlist "${name}" created successfully!`);
+      } else {
+        console.error('Failed to create playlist:', result.error);
+        alert(`Failed to create playlist: ${result.error}`);
       }
     }
   });
