@@ -15,6 +15,11 @@ const settingsModal = document.getElementById('settingsModal');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const metadataModal = document.getElementById('metadataModal');
 const closeMetadataBtn = document.getElementById('closeMetadataBtn');
+const createPlaylistModal = document.getElementById('createPlaylistModal');
+const closePlaylistModalBtn = document.getElementById('closePlaylistModalBtn');
+const createPlaylistForm = document.getElementById('createPlaylistForm');
+const playlistNameInput = document.getElementById('playlistNameInput');
+const cancelPlaylistBtn = document.getElementById('cancelPlaylistBtn');
 const songTableBody = document.getElementById('songTableBody');
 const playlistList = document.getElementById('playlistList');
 const searchBox = document.getElementById('searchBox');
@@ -392,9 +397,17 @@ function setupEventListeners() {
     player.seekPercent(e.target.value);
   });
   
-  // Add playlist
-  document.getElementById('addPlaylistBtn').addEventListener('click', async () => {
-    const name = prompt('Enter playlist name:');
+  // Add playlist - open modal
+  document.getElementById('addPlaylistBtn').addEventListener('click', () => {
+    playlistNameInput.value = '';
+    createPlaylistModal.classList.add('active');
+    playlistNameInput.focus();
+  });
+
+  // Create playlist form submission
+  createPlaylistForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = playlistNameInput.value.trim();
     if (name) {
       console.log('Creating playlist:', name);
       const result = await window.electronAPI.db.createPlaylist(name);
@@ -402,11 +415,27 @@ function setupEventListeners() {
       if (result.success) {
         console.log('Playlist created successfully, reloading playlists...');
         await loadPlaylists();
-        alert(`Playlist "${name}" created successfully!`);
+        createPlaylistModal.classList.remove('active');
+        playlistNameInput.value = '';
       } else {
         console.error('Failed to create playlist:', result.error);
-        alert(`Failed to create playlist: ${result.error}`);
       }
+    }
+  });
+
+  // Close playlist modal
+  closePlaylistModalBtn.addEventListener('click', () => {
+    createPlaylistModal.classList.remove('active');
+  });
+
+  cancelPlaylistBtn.addEventListener('click', () => {
+    createPlaylistModal.classList.remove('active');
+  });
+
+  // Close playlist modal on outside click
+  createPlaylistModal.addEventListener('click', (e) => {
+    if (e.target === createPlaylistModal) {
+      createPlaylistModal.classList.remove('active');
     }
   });
   
