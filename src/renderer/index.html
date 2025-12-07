@@ -216,7 +216,28 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Create Playlist Modal -->
+    <div class="modal" id="createPlaylistModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Create New Playlist</h2>
+                <button class="close-btn" id="closePlaylistModalBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="createPlaylistForm">
+                    <label for="playlistNameInput">Playlist Name:</label>
+                    <input type="text" id="playlistNameInput" placeholder="Enter playlist name..." required autofocus>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary">Create Playlist</button>
+                        <button type="button" class="btn" id="cancelPlaylistBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="../audio/player.js"></script>
     <script src="renderer.js"></script>
 </body>
