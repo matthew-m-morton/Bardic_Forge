@@ -426,7 +426,54 @@ function setupEventListeners() {
       e.target.style.textDecoration = 'none';
     }
   });
-  
+
+  // Volume controls
+  let previousVolume = 100;
+  const volumeBtn = document.getElementById('volumeBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+
+  function updateVolumeIcon(volume) {
+    if (volume === 0) {
+      volumeBtn.textContent = '🔇'; // Muted
+    } else if (volume <= 33) {
+      volumeBtn.textContent = '🔈'; // Low
+    } else if (volume <= 66) {
+      volumeBtn.textContent = '🔉'; // Medium
+    } else {
+      volumeBtn.textContent = '🔊'; // High
+    }
+  }
+
+  // Volume button click - mute/unmute
+  volumeBtn.addEventListener('click', () => {
+    const currentVolume = player.getVolume();
+    if (currentVolume > 0) {
+      previousVolume = currentVolume;
+      player.setVolume(0);
+      volumeSlider.value = 0;
+      updateVolumeIcon(0);
+    } else {
+      player.setVolume(previousVolume);
+      volumeSlider.value = previousVolume;
+      updateVolumeIcon(previousVolume);
+    }
+  });
+
+  // Volume slider input
+  volumeSlider.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value);
+    player.setVolume(volume);
+    updateVolumeIcon(volume);
+    if (volume > 0) {
+      previousVolume = volume;
+    }
+  });
+
+  // Initialize volume
+  const initialVolume = player.getVolume();
+  volumeSlider.value = initialVolume;
+  updateVolumeIcon(initialVolume);
+
   // Progress bar
   document.getElementById('progressBar').addEventListener('input', (e) => {
     player.seekPercent(e.target.value);
