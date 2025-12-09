@@ -20,6 +20,11 @@ const closePlaylistModalBtn = document.getElementById('closePlaylistModalBtn');
 const createPlaylistForm = document.getElementById('createPlaylistForm');
 const playlistNameInput = document.getElementById('playlistNameInput');
 const cancelPlaylistBtn = document.getElementById('cancelPlaylistBtn');
+const addToPlaylistModal = document.getElementById('addToPlaylistModal');
+const closeAddToPlaylistBtn = document.getElementById('closeAddToPlaylistBtn');
+const cancelAddToPlaylistBtn = document.getElementById('cancelAddToPlaylistBtn');
+const playlistSelectionList = document.getElementById('playlistSelectionList');
+const addToPlaylistMessage = document.getElementById('addToPlaylistMessage');
 const songTableBody = document.getElementById('songTableBody');
 const playlistList = document.getElementById('playlistList');
 const searchBox = document.getElementById('searchBox');
@@ -447,7 +452,23 @@ function setupEventListeners() {
   
   // Action panel
   document.getElementById('compareBtn').addEventListener('click', compareSelected);
+  document.getElementById('addToPlaylistBtn').addEventListener('click', showAddToPlaylistModal);
   document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+
+  // Add to playlist modal handlers
+  closeAddToPlaylistBtn.addEventListener('click', () => {
+    addToPlaylistModal.classList.remove('active');
+  });
+
+  cancelAddToPlaylistBtn.addEventListener('click', () => {
+    addToPlaylistModal.classList.remove('active');
+  });
+
+  addToPlaylistModal.addEventListener('click', (e) => {
+    if (e.target === addToPlaylistModal) {
+      addToPlaylistModal.classList.remove('active');
+    }
+  });
 }
 
 // Import files
@@ -529,16 +550,89 @@ function compareSelected() {
 }
 
 // Delete selected songs
+// Show add to playlist modal
+function showAddToPlaylistModal() {
+  console.log('Add to Playlist button clicked!');
+  console.log('Selected songs:', selectedSongs);
+  console.log('Available playlists:', playlists);
+
+  if (selectedSongs.size === 0) {
+    console.warn('No songs selected');
+    alert('Please select at least one song');
+    return;
+  }
+
+  if (playlists.length === 0) {
+    console.warn('No playlists available');
+    alert('No playlists available. Create a playlist first!');
+    return;
+  }
+
+  console.log('Opening add to playlist modal...');
+
+  // Update message
+  addToPlaylistMessage.textContent = `Add ${selectedSongs.size} song(s) to playlist:`;
+
+  // Populate playlist selection
+  playlistSelectionList.innerHTML = '';
+  playlists.forEach(playlist => {
+    const btn = document.createElement('button');
+    btn.className = 'btn primary';
+    btn.style.width = '100%';
+    btn.style.marginBottom = '10px';
+    btn.textContent = playlist.playlist_name;
+    btn.addEventListener('click', async () => {
+      await addSongsToPlaylist(playlist.playlist_id, playlist.playlist_name);
+    });
+    playlistSelectionList.appendChild(btn);
+  });
+
+  console.log('Playlist buttons created:', playlists.length);
+
+  // Show modal
+  addToPlaylistModal.classList.add('active');
+  console.log('Modal should now be visible. Modal element:', addToPlaylistModal);
+}
+
+// Add selected songs to a playlist
+async function addSongsToPlaylist(playlistId, playlistName) {
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const songId of selectedSongs) {
+    const result = await window.electronAPI.db.addSongToPlaylist(playlistId, songId);
+    if (result.success) {
+      successCount++;
+    } else {
+      failCount++;
+      console.error(`Failed to add song ${songId} to playlist:`, result.error);
+    }
+  }
+
+  // Close modal
+  addToPlaylistModal.classList.remove('active');
+
+  // Show result
+  if (failCount === 0) {
+    alert(`Successfully added ${successCount} song(s) to "${playlistName}"`);
+  } else {
+    alert(`Added ${successCount} song(s), failed to add ${failCount} song(s) to "${playlistName}"`);
+  }
+
+  // Clear selection
+  clearSelection();
+}
+
 async function deleteSelected() {
   if (selectedSongs.size === 0) return;
-  
+
   const confirmed = confirm(`Delete ${selectedSongs.size} song(s)?`);
   if (!confirmed) return;
-  
+
   for (const songId of selectedSongs) {
     await window.electronAPI.db.deleteSong(songId);
   }
-  
+
   clearSelection();
   await loadSongs();
 }
