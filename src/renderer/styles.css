@@ -220,7 +220,7 @@ body {
 }
 
 .control-btn.small {
-    font-size: 18px;
+    font-size: 24pt;
 }
 
 .control-btn.active {
@@ -390,6 +390,11 @@ body {
 
 .song-table tbody tr.playing {
     color: #1db954;
+}
+
+.song-table tbody tr.now-playing {
+    background-color: #1a4d2e;
+    border-left: 3px solid #1db954;
 }
 
 .checkbox-col { width: 40px; }

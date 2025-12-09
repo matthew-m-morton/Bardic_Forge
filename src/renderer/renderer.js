@@ -232,6 +232,23 @@ function updateNowPlaying(song) {
     document.getElementById('nowPlayingTitle').textContent = song.title || 'Unknown';
     document.getElementById('nowPlayingArtist').textContent = song.artist || 'Unknown Artist';
     document.getElementById('playBtn').textContent = '⏸';
+
+    // Highlight currently playing song in the table
+    highlightCurrentSong(song.song_id);
+  }
+}
+
+// Highlight the currently playing song
+function highlightCurrentSong(songId) {
+  // Remove previous highlight
+  document.querySelectorAll('.song-row.now-playing').forEach(row => {
+    row.classList.remove('now-playing');
+  });
+
+  // Add highlight to current song
+  const currentRow = document.querySelector(`tr[data-song-id="${songId}"]`);
+  if (currentRow) {
+    currentRow.classList.add('now-playing');
   }
 }
 
@@ -390,11 +407,24 @@ function setupEventListeners() {
   document.getElementById('shuffleBtn').addEventListener('click', (e) => {
     const isShuffleOn = player.toggleShuffle();
     e.target.classList.toggle('active', isShuffleOn);
+    // Toggle strikethrough when shuffle is off
+    e.target.style.textDecoration = isShuffleOn ? 'none' : 'line-through';
   });
-  
+
   document.getElementById('repeatBtn').addEventListener('click', (e) => {
     const mode = player.cycleRepeat();
     e.target.classList.toggle('active', mode !== 'none');
+    // Update icon based on repeat mode
+    if (mode === 'none') {
+      e.target.textContent = '🔁';
+      e.target.style.textDecoration = 'line-through';
+    } else if (mode === 'all') {
+      e.target.textContent = '🔁';
+      e.target.style.textDecoration = 'none';
+    } else if (mode === 'one') {
+      e.target.textContent = '🔂';
+      e.target.style.textDecoration = 'none';
+    }
   });
   
   // Progress bar
