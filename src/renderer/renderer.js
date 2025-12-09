@@ -246,7 +246,7 @@ function updateNowPlaying(song) {
 // Highlight the currently playing song
 function highlightCurrentSong(songId) {
   // Remove previous highlight
-  document.querySelectorAll('.song-row.now-playing').forEach(row => {
+  document.querySelectorAll('tr.now-playing').forEach(row => {
     row.classList.remove('now-playing');
   });
 
@@ -350,7 +350,7 @@ function setupPlayerCallbacks() {
     // If playback has stopped (reached end of playlist with no repeat), clear highlighting
     setTimeout(() => {
       if (!player.isPlaying) {
-        document.querySelectorAll('.song-row.now-playing').forEach(row => {
+        document.querySelectorAll('tr.now-playing').forEach(row => {
           row.classList.remove('now-playing');
         });
       }
