@@ -552,15 +552,23 @@ function compareSelected() {
 // Delete selected songs
 // Show add to playlist modal
 function showAddToPlaylistModal() {
+  console.log('Add to Playlist button clicked!');
+  console.log('Selected songs:', selectedSongs);
+  console.log('Available playlists:', playlists);
+
   if (selectedSongs.size === 0) {
+    console.warn('No songs selected');
     alert('Please select at least one song');
     return;
   }
 
   if (playlists.length === 0) {
+    console.warn('No playlists available');
     alert('No playlists available. Create a playlist first!');
     return;
   }
+
+  console.log('Opening add to playlist modal...');
 
   // Update message
   addToPlaylistMessage.textContent = `Add ${selectedSongs.size} song(s) to playlist:`;
@@ -579,8 +587,11 @@ function showAddToPlaylistModal() {
     playlistSelectionList.appendChild(btn);
   });
 
+  console.log('Playlist buttons created:', playlists.length);
+
   // Show modal
   addToPlaylistModal.classList.add('active');
+  console.log('Modal should now be visible. Modal element:', addToPlaylistModal);
 }
 
 // Add selected songs to a playlist
