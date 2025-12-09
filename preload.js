@@ -36,7 +36,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addSongToPlaylist: (playlistId, songId) => ipcRenderer.invoke('db:addSongToPlaylist', playlistId, songId),
     removeSongFromPlaylist: (playlistId, songId) => ipcRenderer.invoke('db:removeSongFromPlaylist', playlistId, songId),
     getPlaylistSongs: (playlistId) => ipcRenderer.invoke('db:getPlaylistSongs', playlistId),
-    
+    updateSongPositionInPlaylist: (playlistId, songId, newPosition) => ipcRenderer.invoke('db:updateSongPositionInPlaylist', playlistId, songId, newPosition),
+    reorderPlaylistSongs: (playlistId, songIds) => ipcRenderer.invoke('db:reorderPlaylistSongs', playlistId, songIds),
+
     searchSongs: (query) => ipcRenderer.invoke('db:searchSongs', query),
     findDuplicates: () => ipcRenderer.invoke('db:findDuplicates'),
     

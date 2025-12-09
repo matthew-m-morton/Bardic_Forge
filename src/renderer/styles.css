@@ -461,6 +461,46 @@ body {
 .album-col { width: 25%; }
 .length-col { width: 15%; }
 
+/* Playlist Controls */
+.playlist-controls-col {
+    width: 100px;
+    text-align: center;
+}
+
+.control-icon-btn {
+    background: transparent;
+    border: 1px solid #444;
+    color: #fff;
+    padding: 4px 8px;
+    margin: 0 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.control-icon-btn:hover:not(:disabled) {
+    background-color: #333;
+    border-color: #1db954;
+    color: #1db954;
+}
+
+.control-icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.control-icon-btn.remove-btn {
+    font-size: 20px;
+    font-weight: bold;
+    padding: 2px 10px;
+}
+
+.control-icon-btn.remove-btn:hover:not(:disabled) {
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
 /* Action Panel */
 .action-panel {
     padding: 15px 30px;

@@ -344,6 +344,45 @@ function getPlaylistSongs(playlistId) {
   }
 }
 
+function updateSongPositionInPlaylist(playlistId, songId, newPosition) {
+  try {
+    const stmt = db.prepare(`
+      UPDATE playlist_songs
+      SET position = ?
+      WHERE playlist_id = ? AND song_id = ?
+    `);
+    stmt.run([newPosition, playlistId, songId]);
+    stmt.free();
+
+    saveDatabase();
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating song position:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+function reorderPlaylistSongs(playlistId, songIds) {
+  try {
+    // Update all positions based on the new order
+    songIds.forEach((songId, index) => {
+      const stmt = db.prepare(`
+        UPDATE playlist_songs
+        SET position = ?
+        WHERE playlist_id = ? AND song_id = ?
+      `);
+      stmt.run([index + 1, playlistId, songId]);
+      stmt.free();
+    });
+
+    saveDatabase();
+    return { success: true };
+  } catch (error) {
+    console.error('Error reordering playlist songs:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Search Operations
 function searchSongs(query) {
   try {
@@ -454,6 +493,8 @@ module.exports = {
   addSongToPlaylist,
   removeSongFromPlaylist,
   getPlaylistSongs,
+  updateSongPositionInPlaylist,
+  reorderPlaylistSongs,
   searchSongs,
   findDuplicates,
   getSetting,

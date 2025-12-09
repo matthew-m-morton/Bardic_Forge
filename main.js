@@ -226,6 +226,14 @@ ipcMain.handle('db:getPlaylistSongs', async (event, playlistId) => {
   return db.getPlaylistSongs(playlistId);
 });
 
+ipcMain.handle('db:updateSongPositionInPlaylist', async (event, playlistId, songId, newPosition) => {
+  return db.updateSongPositionInPlaylist(playlistId, songId, newPosition);
+});
+
+ipcMain.handle('db:reorderPlaylistSongs', async (event, playlistId, songIds) => {
+  return db.reorderPlaylistSongs(playlistId, songIds);
+});
+
 ipcMain.handle('db:searchSongs', async (event, query) => {
   return db.searchSongs(query);
 });

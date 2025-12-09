@@ -90,21 +90,26 @@ async function loadPlaylists() {
 function renderSongs() {
   songTableBody.innerHTML = '';
 
+  const isPlaylistView = currentView === 'playlist' && currentPlaylist;
+  const colSpan = isPlaylistView ? 7 : 6;
+
   if (filteredSongs.length === 0) {
-    songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>';
+    songTableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>`;
     return;
   }
 
   filteredSongs.forEach((song, index) => {
     const row = document.createElement('tr');
     row.dataset.songId = song.song_id;
+    row.dataset.index = index;
 
     const isSelected = selectedSongs.has(song.song_id);
     if (isSelected) row.classList.add('selected');
 
     const duration = formatDuration(song.duration);
 
-    row.innerHTML = `
+    // Base columns
+    let rowHTML = `
       <td class="checkbox-col"><input type="checkbox" class="song-checkbox" ${isSelected ? 'checked' : ''}></td>
       <td class="number-col">${index + 1}</td>
       <td class="title-col">${escapeHtml(song.title || 'Unknown')}</td>
@@ -113,9 +118,23 @@ function renderSongs() {
       <td class="length-col">${duration}</td>
     `;
 
+    // Add playlist controls column if in playlist view
+    if (isPlaylistView) {
+      rowHTML += `
+        <td class="playlist-controls-col">
+          <button class="control-icon-btn move-up-btn" title="Move up" ${index === 0 ? 'disabled' : ''}>↑</button>
+          <button class="control-icon-btn move-down-btn" title="Move down" ${index === filteredSongs.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="control-icon-btn remove-btn" title="Remove from playlist">×</button>
+        </td>
+      `;
+    }
+
+    row.innerHTML = rowHTML;
+
     // Row click - play song
     row.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('song-checkbox')) {
+      if (!e.target.classList.contains('song-checkbox') &&
+          !e.target.classList.contains('control-icon-btn')) {
         playSong(song, index);
       }
     });
@@ -126,6 +145,28 @@ function renderSongs() {
       e.stopPropagation();
       toggleSongSelection(song.song_id);
     });
+
+    // Playlist control buttons
+    if (isPlaylistView) {
+      const moveUpBtn = row.querySelector('.move-up-btn');
+      const moveDownBtn = row.querySelector('.move-down-btn');
+      const removeBtn = row.querySelector('.remove-btn');
+
+      moveUpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveSongUp(index);
+      });
+
+      moveDownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moveSongDown(index);
+      });
+
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSongFromCurrentPlaylist(song.song_id);
+      });
+    }
 
     // Right-click context menu
     row.addEventListener('contextmenu', (e) => {
@@ -165,29 +206,48 @@ function renderPlaylists() {
   });
 }
 
+// Update table header based on view
+function updateTableHeader(isPlaylistView) {
+  const headerRow = document.getElementById('songTableHeader');
+  const existingControlsHeader = headerRow.querySelector('.playlist-controls-header');
+
+  if (isPlaylistView && !existingControlsHeader) {
+    // Add controls column header
+    const controlsHeader = document.createElement('th');
+    controlsHeader.className = 'playlist-controls-header';
+    controlsHeader.textContent = 'Controls';
+    headerRow.appendChild(controlsHeader);
+  } else if (!isPlaylistView && existingControlsHeader) {
+    // Remove controls column header
+    existingControlsHeader.remove();
+  }
+}
+
 // Switch view
 async function switchView(view, playlistId = null) {
   currentView = view;
   currentPlaylist = null;
-  
+
   // Update nav active state
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
   });
-  
+
   // Update view title
   const viewTitle = document.getElementById('viewTitle');
-  
+
   if (view === 'songs') {
     document.querySelector('[data-view="songs"]').classList.add('active');
     viewTitle.textContent = 'Songs';
     playlistBanner.style.display = 'none';
+    updateTableHeader(false);
     filteredSongs = [...allSongs];
     renderSongs();
   } else if (view === 'albums') {
     document.querySelector('[data-view="albums"]').classList.add('active');
     viewTitle.textContent = 'Albums';
     playlistBanner.style.display = 'none';
+    updateTableHeader(false);
     // TODO: Group by albums
     filteredSongs = [...allSongs];
     renderSongs();
@@ -195,6 +255,7 @@ async function switchView(view, playlistId = null) {
     document.querySelector('[data-view="artists"]').classList.add('active');
     viewTitle.textContent = 'Artists';
     playlistBanner.style.display = 'none';
+    updateTableHeader(false);
     // TODO: Group by artists
     filteredSongs = [...allSongs];
     renderSongs();
@@ -204,17 +265,20 @@ async function switchView(view, playlistId = null) {
       currentPlaylist = playlist;
       document.querySelector(`[data-playlist-id="${playlistId}"]`).classList.add('active');
       viewTitle.textContent = playlist.playlist_name;
-      
+
       // Show playlist banner
       playlistBanner.style.display = 'flex';
       document.getElementById('bannerPlaylistName').textContent = playlist.playlist_name;
-      
+
+      // Update table header for playlist view
+      updateTableHeader(true);
+
       // Load playlist songs
       const result = await window.electronAPI.db.getPlaylistSongs(playlistId);
       if (result.success) {
         filteredSongs = result.songs || [];
         const totalDuration = filteredSongs.reduce((sum, song) => sum + (song.duration || 0), 0);
-        document.getElementById('bannerPlaylistStats').textContent = 
+        document.getElementById('bannerPlaylistStats').textContent =
           `${filteredSongs.length} songs • ${formatDuration(totalDuration)} total`;
         renderSongs();
       }
@@ -711,6 +775,62 @@ async function addSongsToPlaylist(playlistId, playlistName) {
 
   // Clear selection
   clearSelection();
+}
+
+// Playlist editing functions
+async function removeSongFromCurrentPlaylist(songId) {
+  if (!currentPlaylist) return;
+
+  const confirmed = confirm('Remove this song from the playlist?');
+  if (!confirmed) return;
+
+  const result = await window.electronAPI.db.removeSongFromPlaylist(currentPlaylist.playlist_id, songId);
+  if (result.success) {
+    // Reload the playlist
+    await switchView('playlist', currentPlaylist.playlist_id);
+  } else {
+    alert('Failed to remove song from playlist: ' + result.error);
+  }
+}
+
+async function moveSongUp(index) {
+  if (!currentPlaylist || index === 0) return;
+
+  // Swap positions with the song above
+  const song = filteredSongs[index];
+  const songAbove = filteredSongs[index - 1];
+
+  // Get all song IDs in new order
+  const newOrder = [...filteredSongs];
+  [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+  const songIds = newOrder.map(s => s.song_id);
+
+  const result = await window.electronAPI.db.reorderPlaylistSongs(currentPlaylist.playlist_id, songIds);
+  if (result.success) {
+    await switchView('playlist', currentPlaylist.playlist_id);
+  } else {
+    alert('Failed to reorder songs: ' + result.error);
+  }
+}
+
+async function moveSongDown(index) {
+  if (!currentPlaylist || index === filteredSongs.length - 1) return;
+
+  // Swap positions with the song below
+  const song = filteredSongs[index];
+  const songBelow = filteredSongs[index + 1];
+
+  // Get all song IDs in new order
+  const newOrder = [...filteredSongs];
+  [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+  const songIds = newOrder.map(s => s.song_id);
+
+  const result = await window.electronAPI.db.reorderPlaylistSongs(currentPlaylist.playlist_id, songIds);
+  if (result.success) {
+    await switchView('playlist', currentPlaylist.playlist_id);
+  } else {
+    alert('Failed to reorder songs: ' + result.error);
+  }
 }
 
 async function deleteSelected() {
