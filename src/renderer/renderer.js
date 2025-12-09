@@ -232,6 +232,23 @@ function updateNowPlaying(song) {
     document.getElementById('nowPlayingTitle').textContent = song.title || 'Unknown';
     document.getElementById('nowPlayingArtist').textContent = song.artist || 'Unknown Artist';
     document.getElementById('playBtn').textContent = '⏸';
+
+    // Highlight currently playing song in the table
+    highlightCurrentSong(song.song_id);
+  }
+}
+
+// Highlight the currently playing song
+function highlightCurrentSong(songId) {
+  // Remove previous highlight
+  document.querySelectorAll('.song-row.now-playing').forEach(row => {
+    row.classList.remove('now-playing');
+  });
+
+  // Add highlight to current song
+  const currentRow = document.querySelector(`tr[data-song-id="${songId}"]`);
+  if (currentRow) {
+    currentRow.classList.add('now-playing');
   }
 }
 
@@ -390,13 +407,73 @@ function setupEventListeners() {
   document.getElementById('shuffleBtn').addEventListener('click', (e) => {
     const isShuffleOn = player.toggleShuffle();
     e.target.classList.toggle('active', isShuffleOn);
+    // Toggle strikethrough when shuffle is off
+    e.target.style.textDecoration = isShuffleOn ? 'none' : 'line-through';
   });
-  
+
   document.getElementById('repeatBtn').addEventListener('click', (e) => {
     const mode = player.cycleRepeat();
     e.target.classList.toggle('active', mode !== 'none');
+    // Update icon based on repeat mode
+    if (mode === 'none') {
+      e.target.textContent = '🔁';
+      e.target.style.textDecoration = 'line-through';
+    } else if (mode === 'all') {
+      e.target.textContent = '🔁';
+      e.target.style.textDecoration = 'none';
+    } else if (mode === 'one') {
+      e.target.textContent = '🔂';
+      e.target.style.textDecoration = 'none';
+    }
   });
-  
+
+  // Volume controls
+  let previousVolume = 100;
+  const volumeBtn = document.getElementById('volumeBtn');
+  const volumeSlider = document.getElementById('volumeSlider');
+
+  function updateVolumeIcon(volume) {
+    if (volume === 0) {
+      volumeBtn.textContent = '🔇'; // Muted
+    } else if (volume <= 33) {
+      volumeBtn.textContent = '🔈'; // Low
+    } else if (volume <= 66) {
+      volumeBtn.textContent = '🔉'; // Medium
+    } else {
+      volumeBtn.textContent = '🔊'; // High
+    }
+  }
+
+  // Volume button click - mute/unmute
+  volumeBtn.addEventListener('click', () => {
+    const currentVolume = player.getVolume();
+    if (currentVolume > 0) {
+      previousVolume = currentVolume;
+      player.setVolume(0);
+      volumeSlider.value = 0;
+      updateVolumeIcon(0);
+    } else {
+      player.setVolume(previousVolume);
+      volumeSlider.value = previousVolume;
+      updateVolumeIcon(previousVolume);
+    }
+  });
+
+  // Volume slider input
+  volumeSlider.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value);
+    player.setVolume(volume);
+    updateVolumeIcon(volume);
+    if (volume > 0) {
+      previousVolume = volume;
+    }
+  });
+
+  // Initialize volume
+  const initialVolume = player.getVolume();
+  volumeSlider.value = initialVolume;
+  updateVolumeIcon(initialVolume);
+
   // Progress bar
   document.getElementById('progressBar').addEventListener('input', (e) => {
     player.seekPercent(e.target.value);
