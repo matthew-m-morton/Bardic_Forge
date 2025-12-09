@@ -89,21 +89,21 @@ async function loadPlaylists() {
 // Render songs in table
 function renderSongs() {
   songTableBody.innerHTML = '';
-  
+
   if (filteredSongs.length === 0) {
     songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>';
     return;
   }
-  
+
   filteredSongs.forEach((song, index) => {
     const row = document.createElement('tr');
     row.dataset.songId = song.song_id;
-    
+
     const isSelected = selectedSongs.has(song.song_id);
     if (isSelected) row.classList.add('selected');
-    
+
     const duration = formatDuration(song.duration);
-    
+
     row.innerHTML = `
       <td class="checkbox-col"><input type="checkbox" class="song-checkbox" ${isSelected ? 'checked' : ''}></td>
       <td class="number-col">${index + 1}</td>
@@ -112,31 +112,36 @@ function renderSongs() {
       <td class="album-col">${escapeHtml(song.album || 'Unknown Album')}</td>
       <td class="length-col">${duration}</td>
     `;
-    
+
     // Row click - play song
     row.addEventListener('click', (e) => {
       if (!e.target.classList.contains('song-checkbox')) {
         playSong(song, index);
       }
     });
-    
+
     // Checkbox click
     const checkbox = row.querySelector('.song-checkbox');
     checkbox.addEventListener('click', (e) => {
       e.stopPropagation();
       toggleSongSelection(song.song_id);
     });
-    
+
     // Right-click context menu
     row.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showContextMenu(e, song);
     });
-    
+
     songTableBody.appendChild(row);
   });
-  
+
   updateActionPanel();
+
+  // Reapply highlighting to currently playing song if it exists
+  if (player.currentSong && player.isPlaying) {
+    highlightCurrentSong(player.currentSong.song_id);
+  }
 }
 
 // Render playlists in sidebar
@@ -342,6 +347,14 @@ function setupPlayerCallbacks() {
 
   player.onEnded(() => {
     console.log('Song ended');
+    // If playback has stopped (reached end of playlist with no repeat), clear highlighting
+    setTimeout(() => {
+      if (!player.isPlaying) {
+        document.querySelectorAll('.song-row.now-playing').forEach(row => {
+          row.classList.remove('now-playing');
+        });
+      }
+    }, 100);
   });
 }
 
