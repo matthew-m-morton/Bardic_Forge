@@ -266,14 +266,15 @@ body {
 }
 
 .volume-slider {
-    -webkit-appearance: slider-vertical;
     width: 8px;
     height: 100px;
     background: #444;
     border-radius: 4px;
     outline: none;
-    writing-mode: bt-lr;
-    -webkit-appearance: slider-vertical;
+    writing-mode: vertical-lr;
+    direction: rtl;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .volume-slider::-webkit-slider-thumb {

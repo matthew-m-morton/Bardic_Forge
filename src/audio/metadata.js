@@ -229,8 +229,9 @@ async function getAlbumArt(filePath) {
     if (metadata.common.picture && metadata.common.picture.length > 0) {
       const picture = metadata.common.picture[0]; // Get first image
 
-      // Convert buffer to base64
-      const base64 = picture.data.toString('base64');
+      // Convert buffer to base64 - ensure it's a proper Buffer
+      const buffer = Buffer.from(picture.data);
+      const base64 = buffer.toString('base64');
       const mimeType = picture.format || 'image/jpeg';
 
       return {

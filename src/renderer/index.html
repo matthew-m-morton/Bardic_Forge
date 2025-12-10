@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
     <title>Bardic Forge</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -70,7 +70,7 @@
                     <div class="volume-control">
                         <button class="control-btn small" id="volumeBtn" title="Volume">🔊</button>
                         <div class="volume-slider-container">
-                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100" orient="vertical">
+                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="100">
                         </div>
                     </div>
                 </div>
