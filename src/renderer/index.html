@@ -96,10 +96,12 @@
             <!-- Playlist Banner (shown when viewing a playlist) -->
             <div class="playlist-banner" id="playlistBanner" style="display: none;">
                 <div class="banner-info">
-                    <h3 id="bannerPlaylistName"></h3>
+                    <h3>
+                        <span id="bannerPlaylistName"></span>
+                        <button class="edit-playlist-name-btn" id="editPlaylistNameBtn" title="Edit playlist name">✎</button>
+                    </h3>
                     <p id="bannerPlaylistStats"></p>
                 </div>
-                <button class="edit-btn" id="editPlaylistBtn">Edit Playlist</button>
             </div>
             
             <!-- Song Table -->
@@ -126,6 +128,7 @@
                 <span id="selectedCount">0 songs selected</span>
                 <button class="action-btn" id="compareBtn">Compare Selected</button>
                 <button class="action-btn" id="addToPlaylistBtn">Add to Playlist</button>
+                <button class="action-btn" id="removeFromPlaylistBtn" style="display: none;">Remove from Playlist</button>
                 <button class="action-btn danger" id="deleteSelectedBtn">Delete</button>
             </div>
             
@@ -256,6 +259,27 @@
                     <!-- Playlist buttons will be added here dynamically -->
                 </div>
                 <button class="btn" id="cancelAddToPlaylistBtn" style="margin-top: 15px; width: 100%;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Playlist Name Modal -->
+    <div class="modal" id="editPlaylistNameModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Edit Playlist Name</h2>
+                <button class="close-btn" id="closeEditPlaylistNameBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="editPlaylistNameForm">
+                    <label for="editPlaylistNameInput">Playlist Name:</label>
+                    <input type="text" id="editPlaylistNameInput" placeholder="Enter playlist name..." required autofocus>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary">Save</button>
+                        <button type="button" class="btn" id="cancelEditPlaylistNameBtn">Cancel</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

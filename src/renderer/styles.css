@@ -375,11 +375,30 @@ body {
 .banner-info h3 {
     font-size: 18px;
     margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .banner-info p {
     font-size: 13px;
     color: #999;
+}
+
+.edit-playlist-name-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.2s, background-color 0.2s;
+    border-radius: 4px;
+}
+
+.edit-playlist-name-btn:hover {
+    color: #1db954;
+    background-color: rgba(29, 185, 84, 0.1);
 }
 
 .edit-btn {
@@ -455,11 +474,32 @@ body {
 }
 
 .checkbox-col { width: 40px; }
+.reorder-col { width: 60px; text-align: center; }
 .number-col { width: 50px; }
 .title-col { width: 35%; }
 .artist-col { width: 25%; }
 .album-col { width: 25%; }
 .length-col { width: 15%; }
+
+.reorder-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+    transition: color 0.2s;
+    margin: 0 2px;
+}
+
+.reorder-btn:hover:not(:disabled) {
+    color: #1db954;
+}
+
+.reorder-btn:disabled {
+    color: #444;
+    cursor: not-allowed;
+}
 
 /* Action Panel */
 .action-panel {
