@@ -79,7 +79,8 @@
 ### Search & Filter
 - [ ] Advanced search (by artist, album, year, genre)
 - [ ] Filter by genre dropdown
-- [ ] Sort columns (click header to sort)
+- [x] Sort columns (click header to sort)
+- [x] Reverse sort order (click again)
 - [ ] Search results highlighting
 
 ### Duplicate Detection

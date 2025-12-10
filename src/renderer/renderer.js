@@ -8,6 +8,8 @@ let filteredSongs = [];
 let playlists = [];
 let selectedSongs = new Set();
 let currentPlaylist = null;
+let sortColumn = null; // Current column being sorted
+let sortDirection = 'asc'; // 'asc' or 'desc'
 
 // DOM Elements
 const settingsBtn = document.getElementById('settingsBtn');
@@ -95,10 +97,18 @@ async function loadPlaylists() {
 function renderSongs() {
   songTableBody.innerHTML = '';
 
+  // Helper function to get sort indicator
+  const getSortIndicator = (column) => {
+    if (sortColumn === column) {
+      return sortDirection === 'asc' ? ' ▲' : ' ▼';
+    }
+    return '';
+  };
+
   // Update table header based on view
   const tableHeader = document.querySelector('.song-table thead tr');
   if (currentPlaylist) {
-    // Playlist view - add reorder column
+    // Playlist view - add reorder column (no sorting in playlist view)
     tableHeader.innerHTML = `
       <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
       <th class="reorder-col"></th>
@@ -109,15 +119,23 @@ function renderSongs() {
       <th class="length-col">Length</th>
     `;
   } else {
-    // Normal view - no reorder column
+    // Normal view - sortable columns
     tableHeader.innerHTML = `
       <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
       <th class="number-col">#</th>
-      <th class="title-col">Name</th>
-      <th class="artist-col">Artist</th>
-      <th class="album-col">Album</th>
-      <th class="length-col">Length</th>
+      <th class="title-col sortable" data-sort="title">Name${getSortIndicator('title')}</th>
+      <th class="artist-col sortable" data-sort="artist">Artist${getSortIndicator('artist')}</th>
+      <th class="album-col sortable" data-sort="album">Album${getSortIndicator('album')}</th>
+      <th class="length-col sortable" data-sort="duration">Length${getSortIndicator('duration')}</th>
     `;
+
+    // Add click handlers to sortable headers
+    tableHeader.querySelectorAll('.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const column = th.dataset.sort;
+        sortSongs(column);
+      });
+    });
   }
 
   // Re-wire select all checkbox after recreating it
@@ -213,6 +231,52 @@ function renderSongs() {
   if (player.currentSong && player.isPlaying) {
     highlightCurrentSong(player.currentSong.song_id);
   }
+}
+
+// Sort songs by column
+function sortSongs(column) {
+  // If clicking the same column, toggle direction
+  if (sortColumn === column) {
+    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    // New column, default to ascending
+    sortColumn = column;
+    sortDirection = 'asc';
+  }
+
+  // Sort the filtered songs array
+  filteredSongs.sort((a, b) => {
+    let aVal, bVal;
+
+    switch (column) {
+      case 'title':
+        aVal = (a.title || 'Unknown').toLowerCase();
+        bVal = (b.title || 'Unknown').toLowerCase();
+        break;
+      case 'artist':
+        aVal = (a.artist || 'Unknown Artist').toLowerCase();
+        bVal = (b.artist || 'Unknown Artist').toLowerCase();
+        break;
+      case 'album':
+        aVal = (a.album || 'Unknown Album').toLowerCase();
+        bVal = (b.album || 'Unknown Album').toLowerCase();
+        break;
+      case 'duration':
+        aVal = a.duration || 0;
+        bVal = b.duration || 0;
+        break;
+      default:
+        return 0;
+    }
+
+    // Compare values
+    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  // Re-render the table
+  renderSongs();
 }
 
 // Render playlists in sidebar
