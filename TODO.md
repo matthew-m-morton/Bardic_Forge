@@ -72,8 +72,8 @@
 ### Views & Organization
 - [ ] Group songs by Album view
 - [ ] Group songs by Artist view
-- [ ] Album art extraction from files
-- [ ] Album art display in sidebar
+- [x] Album art extraction from files
+- [x] Album art display in sidebar (now-playing area)
 - [ ] Album art in song rows (optional)
 
 ### Search & Filter

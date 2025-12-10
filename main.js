@@ -168,6 +168,9 @@ const db = require('./src/database/db');
 // Import handler
 const importer = require('./src/audio/importer');
 
+// Metadata handler
+const metadata = require('./src/audio/metadata');
+
 // Database IPC Handlers
 ipcMain.handle('db:init', async () => {
   const userDataPath = app.getPath('userData');
@@ -262,6 +265,17 @@ ipcMain.handle('import:mp3Files', async (event, filePaths, progressCallback) => 
 
 ipcMain.handle('import:getInfo', async (event, filePaths) => {
   return importer.getImportInfo(filePaths);
+});
+
+// Metadata IPC Handlers
+ipcMain.handle('metadata:getAlbumArt', async (event, filePath) => {
+  try {
+    const result = await metadata.getAlbumArt(filePath);
+    return result;
+  } catch (error) {
+    console.error('Error getting album art:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // Cleanup on app quit

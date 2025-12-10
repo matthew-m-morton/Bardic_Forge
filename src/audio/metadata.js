@@ -217,6 +217,45 @@ async function getDuration(filePath) {
 }
 
 /**
+ * Extract album art from an audio file
+ * @param {string} filePath - Path to the audio file
+ * @returns {Promise<object>} - Album art data as base64 or null
+ */
+async function getAlbumArt(filePath) {
+  try {
+    const metadata = await parseFile(filePath);
+
+    // Check if there's album art in the file
+    if (metadata.common.picture && metadata.common.picture.length > 0) {
+      const picture = metadata.common.picture[0]; // Get first image
+
+      // Convert buffer to base64
+      const base64 = picture.data.toString('base64');
+      const mimeType = picture.format || 'image/jpeg';
+
+      return {
+        success: true,
+        data: `data:${mimeType};base64,${base64}`,
+        format: picture.format,
+        type: picture.type,
+        description: picture.description
+      };
+    }
+
+    return {
+      success: false,
+      message: 'No album art found'
+    };
+  } catch (error) {
+    console.error('Error extracting album art:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Format duration from seconds to MM:SS
  * @param {number} seconds - Duration in seconds
  * @returns {string} - Formatted duration
@@ -236,5 +275,6 @@ module.exports = {
   hasID3v2Tags,
   upgradeToID3v2,
   getDuration,
+  getAlbumArt,
   formatDuration
 };

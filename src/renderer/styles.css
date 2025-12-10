@@ -139,11 +139,22 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    transition: transform 0.2s;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.album-art:hover {
+    transform: scale(1.02);
 }
 
 .album-placeholder {
     font-size: 60px;
     color: #555;
+    pointer-events: none;
 }
 
 .now-playing-info {
