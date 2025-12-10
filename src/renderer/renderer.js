@@ -236,6 +236,7 @@ function renderSongs() {
 
 // Group songs by a field (album or artist)
 function groupSongsBy(songs, field) {
+  console.log(`📊 groupSongsBy called - field: "${field}", songs count: ${songs.length}`);
   const grouped = {};
 
   songs.forEach(song => {
@@ -245,6 +246,8 @@ function groupSongsBy(songs, field) {
     }
     grouped[key].push(song);
   });
+
+  console.log(`📊 Grouped into ${Object.keys(grouped).length} groups:`, Object.keys(grouped));
 
   // Sort groups alphabetically and sort songs within each group
   const sortedGroups = {};
@@ -266,6 +269,10 @@ function groupSongsBy(songs, field) {
 
 // Render grouped view (albums or artists)
 function renderGroupedView(groupField) {
+  console.log(`🎨 renderGroupedView called - groupField: "${groupField}"`);
+  console.log(`🎨 filteredSongs.length: ${filteredSongs.length}`);
+  console.log(`🎨 expandedSections:`, Array.from(expandedSections));
+
   songTableBody.innerHTML = '';
 
   // Update table header for grouped view (no sortable columns)
@@ -292,8 +299,10 @@ function renderGroupedView(groupField) {
 
   const grouped = groupSongsBy(filteredSongs, groupField);
   const groupKeys = Object.keys(grouped);
+  console.log(`🎨 Total groups to render: ${groupKeys.length}`);
 
   if (groupKeys.length === 0) {
+    console.log('⚠️ No groups found, showing empty state');
     songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>';
     return;
   }
@@ -377,11 +386,16 @@ function renderGroupedView(groupField) {
 
 // Toggle group expansion
 function toggleGroupExpansion(groupName, groupField) {
-  if (expandedSections.has(groupName)) {
+  const wasExpanded = expandedSections.has(groupName);
+  if (wasExpanded) {
     expandedSections.delete(groupName);
+    console.log(`➖ Collapsed group: "${groupName}"`);
   } else {
     expandedSections.add(groupName);
+    console.log(`➕ Expanded group: "${groupName}"`);
   }
+
+  console.log(`🔄 Total expanded sections:`, Array.from(expandedSections));
 
   // Re-render the grouped view
   renderGroupedView(groupField);
@@ -456,30 +470,34 @@ function renderPlaylists() {
 
 // Switch view
 async function switchView(view, playlistId = null) {
+  console.log('🔄 switchView called with:', view, playlistId);
   currentView = view;
   currentPlaylist = null;
-  
+
   // Update nav active state
   document.querySelectorAll('.nav-item').forEach(item => {
     item.classList.remove('active');
   });
-  
+
   // Update view title
   const viewTitle = document.getElementById('viewTitle');
-  
+
   if (view === 'songs') {
+    console.log('📋 Switching to Songs view');
     document.querySelector('[data-view="songs"]').classList.add('active');
     viewTitle.textContent = 'Songs';
     playlistBanner.style.display = 'none';
     filteredSongs = [...allSongs];
     renderSongs();
   } else if (view === 'albums') {
+    console.log('💿 Switching to Albums view, filteredSongs count:', allSongs.length);
     document.querySelector('[data-view="albums"]').classList.add('active');
     viewTitle.textContent = 'Albums';
     playlistBanner.style.display = 'none';
     filteredSongs = [...allSongs];
     renderGroupedView('album');
   } else if (view === 'artists') {
+    console.log('🎤 Switching to Artists view, filteredSongs count:', allSongs.length);
     document.querySelector('[data-view="artists"]').classList.add('active');
     viewTitle.textContent = 'Artists';
     playlistBanner.style.display = 'none';
