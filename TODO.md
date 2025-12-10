@@ -70,8 +70,8 @@
 ## 🔵 Phase 3: Polish & UX
 
 ### Views & Organization
-- [ ] Group songs by Album view
-- [ ] Group songs by Artist view
+- [x] Group songs by Album view (collapsible)
+- [x] Group songs by Artist view (collapsible)
 - [x] Album art extraction from files
 - [x] Album art display in sidebar (now-playing area)
 - [ ] Album art in song rows (optional)

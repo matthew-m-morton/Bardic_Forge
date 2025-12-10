@@ -10,6 +10,7 @@ let selectedSongs = new Set();
 let currentPlaylist = null;
 let sortColumn = null; // Current column being sorted
 let sortDirection = 'asc'; // 'asc' or 'desc'
+let expandedSections = new Set(); // Track which album/artist sections are expanded
 
 // DOM Elements
 const settingsBtn = document.getElementById('settingsBtn');
@@ -233,6 +234,137 @@ function renderSongs() {
   }
 }
 
+// Group songs by a field (album or artist)
+function groupSongsBy(songs, field) {
+  const grouped = {};
+
+  songs.forEach(song => {
+    const key = song[field] || 'Unknown';
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+    grouped[key].push(song);
+  });
+
+  // Sort groups alphabetically and sort songs within each group
+  const sortedGroups = {};
+  Object.keys(grouped).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    .forEach(key => {
+      sortedGroups[key] = grouped[key].sort((a, b) => {
+        // Sort by track number if grouping by album, otherwise by title
+        if (field === 'album') {
+          const trackA = a.track_number || 999;
+          const trackB = b.track_number || 999;
+          if (trackA !== trackB) return trackA - trackB;
+        }
+        return (a.title || '').toLowerCase().localeCompare((b.title || '').toLowerCase());
+      });
+    });
+
+  return sortedGroups;
+}
+
+// Render grouped view (albums or artists)
+function renderGroupedView(groupField) {
+  songTableBody.innerHTML = '';
+
+  const grouped = groupSongsBy(filteredSongs, groupField);
+  const groupKeys = Object.keys(grouped);
+
+  if (groupKeys.length === 0) {
+    songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>';
+    return;
+  }
+
+  groupKeys.forEach(groupName => {
+    const songs = grouped[groupName];
+    const isExpanded = expandedSections.has(groupName);
+
+    // Create group header row
+    const headerRow = document.createElement('tr');
+    headerRow.className = 'group-header';
+    headerRow.dataset.groupName = groupName;
+
+    const arrow = isExpanded ? '▼' : '▶';
+    const label = groupField === 'album' ? 'Album' : 'Artist';
+
+    headerRow.innerHTML = `
+      <td colspan="6" class="group-header-cell">
+        <span class="group-arrow">${arrow}</span>
+        <span class="group-name">${escapeHtml(groupName)}</span>
+        <span class="group-count">${songs.length} song${songs.length !== 1 ? 's' : ''}</span>
+      </td>
+    `;
+
+    // Click to toggle expand/collapse
+    headerRow.addEventListener('click', () => {
+      toggleGroupExpansion(groupName, groupField);
+    });
+
+    songTableBody.appendChild(headerRow);
+
+    // Add songs in this group (if expanded)
+    if (isExpanded) {
+      songs.forEach((song, index) => {
+        const row = document.createElement('tr');
+        row.className = 'group-song-row';
+        row.dataset.songId = song.song_id;
+
+        const isSelected = selectedSongs.has(song.song_id);
+        if (isSelected) row.classList.add('selected');
+
+        const duration = formatDuration(song.duration);
+
+        row.innerHTML = `
+          <td class="checkbox-col"><input type="checkbox" class="song-checkbox" ${isSelected ? 'checked' : ''}></td>
+          <td class="number-col">${index + 1}</td>
+          <td class="title-col">${escapeHtml(song.title || 'Unknown')}</td>
+          <td class="artist-col">${escapeHtml(song.artist || 'Unknown Artist')}</td>
+          <td class="album-col">${escapeHtml(song.album || 'Unknown Album')}</td>
+          <td class="length-col">${duration}</td>
+        `;
+
+        // Row click - play song
+        row.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('song-checkbox')) {
+            // Find the actual index in filteredSongs array
+            const actualIndex = filteredSongs.findIndex(s => s.song_id === song.song_id);
+            playSong(song, actualIndex);
+          }
+        });
+
+        // Checkbox click
+        const checkbox = row.querySelector('.song-checkbox');
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSongSelection(song.song_id);
+        });
+
+        songTableBody.appendChild(row);
+      });
+    }
+  });
+
+  updateActionPanel();
+
+  // Reapply highlighting to currently playing song if it exists
+  if (player.currentSong && player.isPlaying) {
+    highlightCurrentSong(player.currentSong.song_id);
+  }
+}
+
+// Toggle group expansion
+function toggleGroupExpansion(groupName, groupField) {
+  if (expandedSections.has(groupName)) {
+    expandedSections.delete(groupName);
+  } else {
+    expandedSections.add(groupName);
+  }
+
+  // Re-render the grouped view
+  renderGroupedView(groupField);
+}
+
 // Sort songs by column
 function sortSongs(column) {
   // If clicking the same column, toggle direction
@@ -323,16 +455,14 @@ async function switchView(view, playlistId = null) {
     document.querySelector('[data-view="albums"]').classList.add('active');
     viewTitle.textContent = 'Albums';
     playlistBanner.style.display = 'none';
-    // TODO: Group by albums
     filteredSongs = [...allSongs];
-    renderSongs();
+    renderGroupedView('album');
   } else if (view === 'artists') {
     document.querySelector('[data-view="artists"]').classList.add('active');
     viewTitle.textContent = 'Artists';
     playlistBanner.style.display = 'none';
-    // TODO: Group by artists
     filteredSongs = [...allSongs];
-    renderSongs();
+    renderGroupedView('artist');
   } else if (view === 'playlist' && playlistId) {
     const playlist = playlists.find(p => p.playlist_id === playlistId);
     if (playlist) {
