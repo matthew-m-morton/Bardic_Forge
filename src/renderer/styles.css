@@ -457,6 +457,17 @@ body {
     border-bottom: 1px solid #333;
 }
 
+.song-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.song-table th.sortable:hover {
+    color: #fff;
+    background-color: #2a2a2a;
+}
+
 .song-table td {
     padding: 12px 8px;
     font-size: 14px;
