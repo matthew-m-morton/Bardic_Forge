@@ -303,15 +303,48 @@ function playSong(song, index) {
 }
 
 // Update now playing display
-function updateNowPlaying(song) {
+async function updateNowPlaying(song) {
   if (song) {
     document.getElementById('nowPlayingTitle').textContent = song.title || 'Unknown';
     document.getElementById('nowPlayingArtist').textContent = song.artist || 'Unknown Artist';
     document.getElementById('playBtn').textContent = '⏸';
 
+    // Fetch and display album art
+    await updateAlbumArt(song.file_path);
+
     // Highlight currently playing song in the table
     highlightCurrentSong(song.song_id);
   }
+}
+
+// Update album art display
+async function updateAlbumArt(filePath) {
+  const albumArtElement = document.getElementById('albumArt');
+
+  try {
+    const result = await window.electronAPI.metadata.getAlbumArt(filePath);
+
+    if (result.success && result.data) {
+      // Display album art as background image
+      albumArtElement.style.backgroundImage = `url('${result.data}')`;
+      albumArtElement.style.backgroundSize = 'cover';
+      albumArtElement.style.backgroundPosition = 'center';
+      albumArtElement.innerHTML = ''; // Remove placeholder
+    } else {
+      // Show placeholder if no album art
+      resetAlbumArt();
+    }
+  } catch (error) {
+    console.error('Error loading album art:', error);
+    resetAlbumArt();
+  }
+}
+
+// Reset album art to placeholder
+function resetAlbumArt() {
+  const albumArtElement = document.getElementById('albumArt');
+  albumArtElement.style.backgroundImage = '';
+  albumArtElement.innerHTML = '<span class="album-placeholder">♪</span>';
 }
 
 // Highlight the currently playing song
@@ -417,10 +450,10 @@ function setupPlayerCallbacks() {
     document.getElementById('progressBar').value = data.percent || 0;
   });
 
-  player.onLoaded((data) => {
+  player.onLoaded(async (data) => {
     // Update now playing display when a new song loads (next/previous buttons)
     if (player.currentSong) {
-      updateNowPlaying(player.currentSong);
+      await updateNowPlaying(player.currentSong);
     }
   });
 

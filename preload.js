@@ -53,6 +53,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     writeBardicId: (filePath, id) => ipcRenderer.invoke('audio:writeBardicId', filePath, id),
     getDuration: (filePath) => ipcRenderer.invoke('audio:getDuration', filePath)
   },
+
+  // Metadata APIs
+  metadata: {
+    getAlbumArt: (filePath) => ipcRenderer.invoke('metadata:getAlbumArt', filePath)
+  },
   
   // Import APIs
   import: {
