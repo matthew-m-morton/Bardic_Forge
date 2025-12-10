@@ -268,6 +268,28 @@ function groupSongsBy(songs, field) {
 function renderGroupedView(groupField) {
   songTableBody.innerHTML = '';
 
+  // Update table header for grouped view (no sortable columns)
+  const tableHeader = document.querySelector('.song-table thead tr');
+  tableHeader.innerHTML = `
+    <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
+    <th class="number-col">#</th>
+    <th class="title-col">Name</th>
+    <th class="artist-col">Artist</th>
+    <th class="album-col">Album</th>
+    <th class="length-col">Length</th>
+  `;
+
+  // Re-wire select all checkbox
+  const newSelectAllCheckbox = document.getElementById('selectAllCheckbox');
+  newSelectAllCheckbox.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      filteredSongs.forEach(song => selectedSongs.add(song.song_id));
+    } else {
+      clearSelection();
+    }
+    renderGroupedView(groupField);
+  });
+
   const grouped = groupSongsBy(filteredSongs, groupField);
   const groupKeys = Object.keys(grouped);
 
