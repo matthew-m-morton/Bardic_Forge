@@ -25,6 +25,11 @@ const closeAddToPlaylistBtn = document.getElementById('closeAddToPlaylistBtn');
 const cancelAddToPlaylistBtn = document.getElementById('cancelAddToPlaylistBtn');
 const playlistSelectionList = document.getElementById('playlistSelectionList');
 const addToPlaylistMessage = document.getElementById('addToPlaylistMessage');
+const editPlaylistNameModal = document.getElementById('editPlaylistNameModal');
+const closeEditPlaylistNameBtn = document.getElementById('closeEditPlaylistNameBtn');
+const editPlaylistNameForm = document.getElementById('editPlaylistNameForm');
+const editPlaylistNameInput = document.getElementById('editPlaylistNameInput');
+const cancelEditPlaylistNameBtn = document.getElementById('cancelEditPlaylistNameBtn');
 const songTableBody = document.getElementById('songTableBody');
 const playlistList = document.getElementById('playlistList');
 const searchBox = document.getElementById('searchBox');
@@ -90,22 +95,74 @@ async function loadPlaylists() {
 function renderSongs() {
   songTableBody.innerHTML = '';
 
+  // Update table header based on view
+  const tableHeader = document.querySelector('.song-table thead tr');
+  if (currentPlaylist) {
+    // Playlist view - add reorder column
+    tableHeader.innerHTML = `
+      <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
+      <th class="reorder-col"></th>
+      <th class="number-col">#</th>
+      <th class="title-col">Name</th>
+      <th class="artist-col">Artist</th>
+      <th class="album-col">Album</th>
+      <th class="length-col">Length</th>
+    `;
+  } else {
+    // Normal view - no reorder column
+    tableHeader.innerHTML = `
+      <th class="checkbox-col"><input type="checkbox" id="selectAllCheckbox"></th>
+      <th class="number-col">#</th>
+      <th class="title-col">Name</th>
+      <th class="artist-col">Artist</th>
+      <th class="album-col">Album</th>
+      <th class="length-col">Length</th>
+    `;
+  }
+
+  // Re-wire select all checkbox after recreating it
+  const newSelectAllCheckbox = document.getElementById('selectAllCheckbox');
+  newSelectAllCheckbox.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      filteredSongs.forEach(song => selectedSongs.add(song.song_id));
+    } else {
+      clearSelection();
+    }
+    renderSongs();
+  });
+
   if (filteredSongs.length === 0) {
-    songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>';
+    const colspan = currentPlaylist ? 7 : 6;
+    songTableBody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; padding: 40px; color: #666;">No songs found</td></tr>`;
     return;
   }
 
   filteredSongs.forEach((song, index) => {
     const row = document.createElement('tr');
     row.dataset.songId = song.song_id;
+    row.dataset.index = index;
 
     const isSelected = selectedSongs.has(song.song_id);
     if (isSelected) row.classList.add('selected');
 
     const duration = formatDuration(song.duration);
 
-    row.innerHTML = `
+    // Build row HTML based on whether we're in playlist view
+    let rowHTML = `
       <td class="checkbox-col"><input type="checkbox" class="song-checkbox" ${isSelected ? 'checked' : ''}></td>
+    `;
+
+    // Add reorder controls if in playlist view
+    if (currentPlaylist) {
+      rowHTML += `
+        <td class="reorder-col">
+          <button class="reorder-btn" data-direction="up" ${index === 0 ? 'disabled' : ''} title="Move up">▲</button>
+          <button class="reorder-btn" data-direction="down" ${index === filteredSongs.length - 1 ? 'disabled' : ''} title="Move down">▼</button>
+        </td>
+      `;
+    }
+
+    rowHTML += `
       <td class="number-col">${index + 1}</td>
       <td class="title-col">${escapeHtml(song.title || 'Unknown')}</td>
       <td class="artist-col">${escapeHtml(song.artist || 'Unknown Artist')}</td>
@@ -113,9 +170,11 @@ function renderSongs() {
       <td class="length-col">${duration}</td>
     `;
 
+    row.innerHTML = rowHTML;
+
     // Row click - play song
     row.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('song-checkbox')) {
+      if (!e.target.classList.contains('song-checkbox') && !e.target.classList.contains('reorder-btn')) {
         playSong(song, index);
       }
     });
@@ -126,6 +185,18 @@ function renderSongs() {
       e.stopPropagation();
       toggleSongSelection(song.song_id);
     });
+
+    // Reorder button clicks
+    if (currentPlaylist) {
+      const reorderBtns = row.querySelectorAll('.reorder-btn');
+      reorderBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const direction = btn.dataset.direction;
+          await reorderSong(index, direction);
+        });
+      });
+    }
 
     // Right-click context menu
     row.addEventListener('contextmenu', (e) => {
@@ -292,10 +363,18 @@ function clearSelection() {
 // Update action panel
 function updateActionPanel() {
   const count = selectedSongs.size;
-  
+
   if (count > 0) {
     actionPanel.style.display = 'flex';
     selectedCount.textContent = `${count} song${count > 1 ? 's' : ''} selected`;
+
+    // Show/hide "Remove from Playlist" button based on current view
+    const removeFromPlaylistBtn = document.getElementById('removeFromPlaylistBtn');
+    if (currentPlaylist) {
+      removeFromPlaylistBtn.style.display = 'inline-block';
+    } else {
+      removeFromPlaylistBtn.style.display = 'none';
+    }
   } else {
     actionPanel.style.display = 'none';
   }
@@ -543,6 +622,7 @@ function setupEventListeners() {
   // Action panel
   document.getElementById('compareBtn').addEventListener('click', compareSelected);
   document.getElementById('addToPlaylistBtn').addEventListener('click', showAddToPlaylistModal);
+  document.getElementById('removeFromPlaylistBtn').addEventListener('click', removeFromPlaylist);
   document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
 
   // Add to playlist modal handlers
@@ -557,6 +637,54 @@ function setupEventListeners() {
   addToPlaylistModal.addEventListener('click', (e) => {
     if (e.target === addToPlaylistModal) {
       addToPlaylistModal.classList.remove('active');
+    }
+  });
+
+  // Edit playlist name modal handlers
+  document.getElementById('editPlaylistNameBtn').addEventListener('click', () => {
+    if (currentPlaylist) {
+      editPlaylistNameInput.value = currentPlaylist.playlist_name;
+      editPlaylistNameModal.classList.add('active');
+      editPlaylistNameInput.focus();
+      editPlaylistNameInput.select();
+    }
+  });
+
+  editPlaylistNameForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newName = editPlaylistNameInput.value.trim();
+    if (newName && currentPlaylist) {
+      const result = await window.electronAPI.db.updatePlaylist(currentPlaylist.playlist_id, { playlist_name: newName });
+      if (result.success) {
+        // Update local state
+        currentPlaylist.playlist_name = newName;
+        const playlistIndex = playlists.findIndex(p => p.playlist_id === currentPlaylist.playlist_id);
+        if (playlistIndex !== -1) {
+          playlists[playlistIndex].playlist_name = newName;
+        }
+
+        // Update UI
+        document.getElementById('bannerPlaylistName').textContent = newName;
+        document.getElementById('viewTitle').textContent = newName;
+        renderPlaylists();
+        editPlaylistNameModal.classList.remove('active');
+      } else {
+        alert('Failed to update playlist name: ' + result.error);
+      }
+    }
+  });
+
+  closeEditPlaylistNameBtn.addEventListener('click', () => {
+    editPlaylistNameModal.classList.remove('active');
+  });
+
+  cancelEditPlaylistNameBtn.addEventListener('click', () => {
+    editPlaylistNameModal.classList.remove('active');
+  });
+
+  editPlaylistNameModal.addEventListener('click', (e) => {
+    if (e.target === editPlaylistNameModal) {
+      editPlaylistNameModal.classList.remove('active');
     }
   });
 }
@@ -725,6 +853,100 @@ async function deleteSelected() {
 
   clearSelection();
   await loadSongs();
+}
+
+// Remove songs from playlist
+async function removeFromPlaylist() {
+  if (!currentPlaylist || selectedSongs.size === 0) return;
+
+  const confirmed = confirm(`Remove ${selectedSongs.size} song(s) from "${currentPlaylist.playlist_name}"?`);
+  if (!confirmed) return;
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (const songId of selectedSongs) {
+    const result = await window.electronAPI.db.removeSongFromPlaylist(currentPlaylist.playlist_id, songId);
+    if (result.success) {
+      successCount++;
+    } else {
+      failCount++;
+      console.error(`Failed to remove song ${songId}:`, result.error);
+    }
+  }
+
+  // Show result
+  if (failCount > 0) {
+    alert(`Removed ${successCount} song(s), failed to remove ${failCount} song(s)`);
+  }
+
+  // Clear selection and reload playlist
+  clearSelection();
+  await switchView('playlist', currentPlaylist.playlist_id);
+}
+
+// Reorder song in playlist
+async function reorderSong(currentIndex, direction) {
+  if (!currentPlaylist) return;
+
+  const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+  // Validate target index
+  if (targetIndex < 0 || targetIndex >= filteredSongs.length) return;
+
+  const song1 = filteredSongs[currentIndex];
+  const song2 = filteredSongs[targetIndex];
+
+  // Get current positions (1-based)
+  const pos1 = song1.position || (currentIndex + 1);
+  const pos2 = song2.position || (targetIndex + 1);
+
+  try {
+    // Remove both songs from playlist
+    await window.electronAPI.db.removeSongFromPlaylist(currentPlaylist.playlist_id, song1.song_id);
+    await window.electronAPI.db.removeSongFromPlaylist(currentPlaylist.playlist_id, song2.song_id);
+
+    // Re-add them with swapped positions
+    // We need to manually update positions in the database
+    // Since addSongToPlaylist auto-increments, we need a different approach
+
+    // Get all songs from playlist
+    const result = await window.electronAPI.db.getPlaylistSongs(currentPlaylist.playlist_id);
+    if (!result.success) {
+      console.error('Failed to get playlist songs:', result.error);
+      return;
+    }
+
+    let allSongs = result.songs || [];
+
+    // Remove the two songs we're swapping
+    allSongs = allSongs.filter(s => s.song_id !== song1.song_id && s.song_id !== song2.song_id);
+
+    // Insert them at swapped positions
+    if (direction === 'up') {
+      allSongs.splice(targetIndex, 0, song1);
+      allSongs.splice(currentIndex, 0, song2);
+    } else {
+      allSongs.splice(currentIndex, 0, song2);
+      allSongs.splice(targetIndex, 0, song1);
+    }
+
+    // Clear all songs from playlist
+    for (const song of filteredSongs) {
+      await window.electronAPI.db.removeSongFromPlaylist(currentPlaylist.playlist_id, song.song_id);
+    }
+
+    // Re-add all songs in new order
+    for (let i = 0; i < allSongs.length; i++) {
+      await window.electronAPI.db.addSongToPlaylist(currentPlaylist.playlist_id, allSongs[i].song_id);
+    }
+
+    // Reload playlist view
+    await switchView('playlist', currentPlaylist.playlist_id);
+  } catch (error) {
+    console.error('Error reordering song:', error);
+    alert('Failed to reorder song');
+  }
 }
 
 // Initialize when DOM is ready

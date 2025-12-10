@@ -11,27 +11,27 @@
 ## 🟡 Phase 1: Core Functionality
 
 ### Database & Testing
-- [ ] Verify database initialization works
-- [ ] Run test scripts successfully
-- [ ] Add sample data and verify it displays
-- [ ] Test all CRUD operations
+- [x] Verify database initialization works
+- [x] Run test scripts successfully
+- [x] Add sample data and verify it displays
+- [x] Test all CRUD operations
 
 ### Import Workflow (Priority)
-- [ ] File selection dialog working
-- [ ] Audio format detection
+- [x] File selection dialog working
+- [x] Audio format detection
 - [ ] FFmpeg conversion (non-MP3 → MP3)
 - [ ] ID3v1 → ID3v2 upgrade
-- [ ] Metadata reading from files
-- [ ] Bardic ID generation
-- [ ] Check for existing Bardic ID in files
-- [ ] Database collision detection
-- [ ] Write Bardic ID to file
-- [ ] Insert song into database
-- [ ] Progress bar updates
-- [ ] Detailed log output
+- [x] Metadata reading from files
+- [x] Bardic ID generation
+- [x] Check for existing Bardic ID in files
+- [x] Database collision detection
+- [x] Write Bardic ID to file
+- [x] Insert song into database
+- [x] Progress bar updates
+- [x] Detailed log output
 - [ ] Keep/delete original file option
-- [ ] Batch import support
-- [ ] Error handling
+- [x] Batch import support
+- [x] Error handling
 
 ### Duplicate Handling
 - [ ] Duplicate comparison modal UI
@@ -49,23 +49,23 @@
 - [ ] Validation (required fields)
 
 ### Playlist Management
-- [ ] Add songs to playlist (drag-drop or context menu)
-- [ ] Remove songs from playlist
-- [ ] Reorder songs in playlist
-- [ ] Rename playlist
+- [x] Add songs to playlist (via "Add to Playlist" button)
+- [x] Remove songs from playlist
+- [x] Reorder songs in playlist (up/down arrows)
+- [ ] Reorder songs in playlist (drag-and-drop)
+- [x] Rename playlist
 - [ ] Delete playlist
 - [ ] Play playlist from start
-- [ ] Edit playlist banner button functionality
 
 ### Playback
-- [ ] Play song on row double-click
-- [ ] Now playing display updates
-- [ ] Progress bar tracks playback
-- [ ] Next/Previous buttons work
-- [ ] Shuffle mode works
-- [ ] Repeat modes (none/one/all)
-- [ ] Volume control slider
-- [ ] Mute button
+- [x] Play song on row click
+- [x] Now playing display updates
+- [x] Progress bar tracks playback
+- [x] Next/Previous buttons work
+- [x] Shuffle mode works
+- [x] Repeat modes (none/one/all)
+- [x] Volume control slider
+- [x] Mute button
 
 ## 🔵 Phase 3: Polish & UX
 
