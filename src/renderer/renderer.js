@@ -624,7 +624,15 @@ function toggleSongSelection(songId) {
 function clearSelection() {
   selectedSongs.clear();
   selectAllCheckbox.checked = false;
-  renderSongs();
+
+  // Re-render based on current view
+  if (currentView === 'albums') {
+    renderGroupedView('album');
+  } else if (currentView === 'artists') {
+    renderGroupedView('artist');
+  } else {
+    renderSongs();
+  }
 }
 
 // Update action panel
