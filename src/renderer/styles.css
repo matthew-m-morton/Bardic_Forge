@@ -496,6 +496,59 @@ body {
     border-left: 3px solid #1db954;
 }
 
+/* Grouped View Styles (Albums/Artists) */
+.song-table tbody tr.group-header {
+    background-color: #252525;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.song-table tbody tr.group-header:hover {
+    background-color: #2d2d2d;
+}
+
+.group-header-cell {
+    padding: 16px 12px !important;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    user-select: none;
+}
+
+.group-arrow {
+    display: inline-block;
+    width: 20px;
+    color: #999;
+    transition: transform 0.2s;
+}
+
+.group-name {
+    margin-left: 8px;
+}
+
+.group-count {
+    margin-left: 12px;
+    font-size: 13px;
+    color: #999;
+    font-weight: 400;
+}
+
+.song-table tbody tr.group-song-row {
+    background-color: #1e1e1e;
+}
+
+.song-table tbody tr.group-song-row:hover {
+    background-color: #272727;
+}
+
+.song-table tbody tr.group-song-row td {
+    padding-left: 24px;
+}
+
+.song-table tbody tr.group-song-row td.checkbox-col {
+    padding-left: 16px;
+}
+
 .checkbox-col { width: 40px; }
 .reorder-col { width: 60px; text-align: center; }
 .number-col { width: 50px; }
