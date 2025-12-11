@@ -1191,11 +1191,7 @@ async function showComparisonModal(songs) {
 
   // Build comparison table
   const tableContainer = table.parentElement;
-  tableContainer.innerHTML = `
-    <table class="comparison-table" id="comparisonTable">
-      ${buildComparisonTable(songsWithMeta)}
-    </table>
-  `;
+  tableContainer.innerHTML = buildComparisonTable(songsWithMeta);
 
   // Add delete button event listeners
   songsWithMeta.forEach((song, index) => {
@@ -1247,7 +1243,8 @@ function buildComparisonTable(songs) {
     { key: 'date_added', label: 'Date Added', format: (val) => val ? new Date(val).toLocaleDateString() : 'Unknown' }
   ];
 
-  let html = '<thead><tr><th class="field-column">Field</th>';
+  let html = '<table class="comparison-table" id="comparisonTable">';
+  html += '<thead><tr><th class="field-column">Field</th>';
 
   // Header row with song numbers
   songs.forEach((_, index) => {
@@ -1302,8 +1299,10 @@ function buildComparisonTable(songs) {
 
   html += '</tbody>';
 
-  // Action row (outside table, no grid)
-  html += '<div class="comparison-actions">';
+  // Close the table and add action buttons in a grid-aligned structure
+  html += '</table>';
+  html += '<div class="comparison-actions-grid">';
+  html += '<div class="action-spacer"></div>'; // Spacer for the "Field" column
   songs.forEach((_, index) => {
     html += `<button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button>`;
   });

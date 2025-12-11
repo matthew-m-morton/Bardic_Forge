@@ -984,12 +984,16 @@ form input:focus {
 }
 
 /* Comparison actions row */
-.comparison-actions {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
+.comparison-actions-grid {
+    display: grid;
+    grid-template-columns: var(--field-column-width, 120px) repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
     padding: 20px 0;
-    gap: 10px;
+    margin-top: 20px;
+}
+
+.action-spacer {
+    grid-column: 1;
 }
 
 .comparison-delete-btn {
@@ -1001,8 +1005,7 @@ form input:focus {
     cursor: pointer;
     font-size: 13px;
     transition: background-color 0.2s;
-    flex: 1;
-    max-width: 150px;
+    margin: 0 12px;
 }
 
 .comparison-delete-btn:hover {
