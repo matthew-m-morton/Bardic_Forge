@@ -1043,7 +1043,6 @@ function setupEventListeners() {
   const comparisonModal = document.getElementById('comparisonModal');
   const closeComparisonBtn = document.getElementById('closeComparisonBtn');
   const doneComparisonBtn = document.getElementById('doneComparisonBtn');
-  const cancelComparisonBtn = document.getElementById('cancelComparisonBtn');
 
   closeComparisonBtn.addEventListener('click', async () => {
     stopAllComparisonPlayback();
@@ -1057,11 +1056,6 @@ function setupEventListeners() {
     comparisonModal.classList.remove('active');
     await loadSongs();
     clearSelection();
-  });
-
-  cancelComparisonBtn.addEventListener('click', () => {
-    stopAllComparisonPlayback();
-    comparisonModal.classList.remove('active');
   });
 
   comparisonModal.addEventListener('click', (e) => {
@@ -1299,14 +1293,15 @@ function buildComparisonTable(songs) {
 
   html += '</tbody>';
 
-  // Close the table and add action buttons in a grid-aligned structure
-  html += '</table>';
-  html += '<div class="comparison-actions-grid">';
-  html += '<div class="action-spacer"></div>'; // Spacer for the "Field" column
+  // Add action buttons as table footer for perfect alignment
+  html += '<tfoot><tr>';
+  html += '<td class="field-column"></td>'; // Empty spacer cell
   songs.forEach((_, index) => {
-    html += `<button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button>`;
+    html += `<td><button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button></td>`;
   });
-  html += '</div>';
+  html += '</tr></tfoot>';
+
+  html += '</table>';
 
   return html;
 }
