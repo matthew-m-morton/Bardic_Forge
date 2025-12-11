@@ -1038,6 +1038,34 @@ function setupEventListeners() {
       editPlaylistNameModal.classList.remove('active');
     }
   });
+
+  // Comparison modal event listeners
+  const comparisonModal = document.getElementById('comparisonModal');
+  const closeComparisonBtn = document.getElementById('closeComparisonBtn');
+  const doneComparisonBtn = document.getElementById('doneComparisonBtn');
+  const cancelComparisonBtn = document.getElementById('cancelComparisonBtn');
+
+  closeComparisonBtn.addEventListener('click', async () => {
+    comparisonModal.classList.remove('active');
+    await loadSongs();
+    clearSelection();
+  });
+
+  doneComparisonBtn.addEventListener('click', async () => {
+    comparisonModal.classList.remove('active');
+    await loadSongs();
+    clearSelection();
+  });
+
+  cancelComparisonBtn.addEventListener('click', () => {
+    comparisonModal.classList.remove('active');
+  });
+
+  comparisonModal.addEventListener('click', (e) => {
+    if (e.target === comparisonModal) {
+      comparisonModal.classList.remove('active');
+    }
+  });
 }
 
 // Import files
@@ -1114,8 +1142,127 @@ function compareSelected() {
     alert('Please select 2-4 songs to compare');
     return;
   }
-  // TODO: Implement comparison modal
-  console.log('Comparing:', selectedSongs);
+
+  // Get the selected song objects
+  const songsToCompare = allSongs.filter(song => selectedSongs.has(song.song_id));
+
+  if (songsToCompare.length < 2) {
+    alert('Could not find selected songs');
+    return;
+  }
+
+  showComparisonModal(songsToCompare);
+}
+
+// Show comparison modal with songs
+function showComparisonModal(songs) {
+  const modal = document.getElementById('comparisonModal');
+  const table = document.getElementById('comparisonTable');
+  const title = document.getElementById('comparisonTitle');
+
+  title.textContent = `Manual Duplicate Comparison (${songs.length} songs selected)`;
+
+  // Build comparison table
+  table.innerHTML = buildComparisonTable(songs);
+
+  // Add delete button event listeners
+  songs.forEach((song, index) => {
+    const deleteBtn = document.getElementById(`deleteComparisonSong${index}`);
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (confirm(`Delete "${song.title}"?`)) {
+          await window.electronAPI.db.deleteSong(song.song_id);
+
+          // Remove song from comparison
+          songs.splice(index, 1);
+
+          if (songs.length < 2) {
+            // Close modal if less than 2 songs remain
+            modal.classList.remove('active');
+            await loadSongs();
+            clearSelection();
+          } else {
+            // Rebuild table
+            table.innerHTML = buildComparisonTable(songs);
+            title.textContent = `Manual Duplicate Comparison (${songs.length} songs selected)`;
+          }
+        }
+      });
+    }
+  });
+
+  modal.classList.add('active');
+}
+
+// Build comparison table HTML
+function buildComparisonTable(songs) {
+  const fields = [
+    { key: 'title', label: 'Title' },
+    { key: 'artist', label: 'Artist' },
+    { key: 'album', label: 'Album' },
+    { key: 'duration', label: 'Duration', format: (val) => formatDuration(val) },
+    { key: 'year', label: 'Year' },
+    { key: 'genre', label: 'Genre' },
+    { key: 'track_number', label: 'Track #' },
+    { key: 'file_size', label: 'File Size', format: (val) => formatFileSize(val) },
+    { key: 'format', label: 'Format' },
+    { key: 'bitrate', label: 'Bitrate', format: (val) => val ? `${val} kbps` : 'Unknown' },
+    { key: 'file_path', label: 'File Path', isPath: true },
+    { key: 'date_added', label: 'Date Added', format: (val) => val ? new Date(val).toLocaleDateString() : 'Unknown' }
+  ];
+
+  let html = '<thead><tr><th class="field-column">Field</th>';
+
+  // Header row with song numbers
+  songs.forEach((_, index) => {
+    html += `<th class="song-column">Song ${index + 1}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  // Data rows
+  fields.forEach(field => {
+    html += '<tr>';
+    html += `<td class="field-column">${field.label}</td>`;
+
+    // Get values for this field across all songs
+    const values = songs.map(song => {
+      let value = song[field.key];
+      if (field.format && value !== undefined && value !== null) {
+        value = field.format(value);
+      }
+      return value || 'Unknown';
+    });
+
+    // Check if values differ (for highlighting)
+    const allSame = values.every(v => v === values[0]);
+
+    songs.forEach((song, index) => {
+      const value = values[index];
+      const highlightClass = !allSame && field.key !== 'file_path' ? 'highlight-different' : '';
+      const pathClass = field.isPath ? 'file-path-cell' : '';
+      html += `<td class="${highlightClass} ${pathClass}" title="${field.isPath ? value : ''}">${escapeHtml(String(value))}</td>`;
+    });
+
+    html += '</tr>';
+  });
+
+  // Action row
+  html += '<tr><td class="field-column">Action</td>';
+  songs.forEach((_, index) => {
+    html += `<td><button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button></td>`;
+  });
+  html += '</tr>';
+
+  html += '</tbody>';
+  return html;
+}
+
+// Format file size
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return 'Unknown';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
 // Delete selected songs
