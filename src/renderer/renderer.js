@@ -1046,23 +1046,27 @@ function setupEventListeners() {
   const cancelComparisonBtn = document.getElementById('cancelComparisonBtn');
 
   closeComparisonBtn.addEventListener('click', async () => {
+    stopAllComparisonPlayback();
     comparisonModal.classList.remove('active');
     await loadSongs();
     clearSelection();
   });
 
   doneComparisonBtn.addEventListener('click', async () => {
+    stopAllComparisonPlayback();
     comparisonModal.classList.remove('active');
     await loadSongs();
     clearSelection();
   });
 
   cancelComparisonBtn.addEventListener('click', () => {
+    stopAllComparisonPlayback();
     comparisonModal.classList.remove('active');
   });
 
   comparisonModal.addEventListener('click', (e) => {
     if (e.target === comparisonModal) {
+      stopAllComparisonPlayback();
       comparisonModal.classList.remove('active');
     }
   });
@@ -1155,18 +1159,41 @@ function compareSelected() {
 }
 
 // Show comparison modal with songs
-function showComparisonModal(songs) {
+async function showComparisonModal(songs) {
   const modal = document.getElementById('comparisonModal');
   const table = document.getElementById('comparisonTable');
   const title = document.getElementById('comparisonTitle');
 
   title.textContent = `Manual Duplicate Comparison (${songs.length} songs selected)`;
 
+  // Get additional metadata for each song
+  const songsWithMeta = await Promise.all(songs.map(async (song) => {
+    // Count songs in album
+    const albumSongCount = allSongs.filter(s =>
+      (s.album || 'Unknown') === (song.album || 'Unknown')
+    ).length;
+
+    // Check if song has album art
+    let hasPicture = false;
+    try {
+      const artResult = await window.electronAPI.metadata.getAlbumArt(song.file_path);
+      hasPicture = artResult.success && artResult.data;
+    } catch (err) {
+      hasPicture = false;
+    }
+
+    return {
+      ...song,
+      albumSongCount,
+      hasPicture
+    };
+  }));
+
   // Build comparison table
-  table.innerHTML = buildComparisonTable(songs);
+  table.innerHTML = buildComparisonTable(songsWithMeta);
 
   // Add delete button event listeners
-  songs.forEach((song, index) => {
+  songsWithMeta.forEach((song, index) => {
     const deleteBtn = document.getElementById(`deleteComparisonSong${index}`);
     if (deleteBtn) {
       deleteBtn.addEventListener('click', async () => {
@@ -1174,22 +1201,24 @@ function showComparisonModal(songs) {
           await window.electronAPI.db.deleteSong(song.song_id);
 
           // Remove song from comparison
-          songs.splice(index, 1);
+          songsWithMeta.splice(index, 1);
 
-          if (songs.length < 2) {
+          if (songsWithMeta.length < 2) {
             // Close modal if less than 2 songs remain
             modal.classList.remove('active');
             await loadSongs();
             clearSelection();
           } else {
             // Rebuild table
-            table.innerHTML = buildComparisonTable(songs);
-            title.textContent = `Manual Duplicate Comparison (${songs.length} songs selected)`;
+            await showComparisonModal(songsWithMeta);
           }
         }
       });
     }
   });
+
+  // Setup playback controls for each song
+  setupComparisonPlayback(songsWithMeta);
 
   modal.classList.add('active');
 }
@@ -1200,6 +1229,7 @@ function buildComparisonTable(songs) {
     { key: 'title', label: 'Title' },
     { key: 'artist', label: 'Artist' },
     { key: 'album', label: 'Album' },
+    { key: 'albumSongCount', label: 'Songs in Album' },
     { key: 'duration', label: 'Duration', format: (val) => formatDuration(val) },
     { key: 'year', label: 'Year' },
     { key: 'genre', label: 'Genre' },
@@ -1207,6 +1237,7 @@ function buildComparisonTable(songs) {
     { key: 'file_size', label: 'File Size', format: (val) => formatFileSize(val) },
     { key: 'format', label: 'Format' },
     { key: 'bitrate', label: 'Bitrate', format: (val) => val ? `${val} kbps` : 'Unknown' },
+    { key: 'hasPicture', label: 'Has Picture', format: (val) => val ? 'Yes' : 'No' },
     { key: 'file_path', label: 'File Path', isPath: true },
     { key: 'date_added', label: 'Date Added', format: (val) => val ? new Date(val).toLocaleDateString() : 'Unknown' }
   ];
@@ -1253,8 +1284,116 @@ function buildComparisonTable(songs) {
   });
   html += '</tr>';
 
+  // Playback row
+  html += '<tr><td class="field-column">Playback</td>';
+  songs.forEach((_, index) => {
+    html += `
+      <td>
+        <div class="comparison-playback-controls">
+          <button class="comparison-play-btn" id="comparisonPlayBtn${index}" title="Play">▶</button>
+          <input type="range" class="comparison-progress" id="comparisonProgress${index}" min="0" max="100" value="0">
+        </div>
+      </td>
+    `;
+  });
+  html += '</tr>';
+
   html += '</tbody>';
   return html;
+}
+
+// Store comparison audio players
+const comparisonPlayers = [];
+
+// Stop all comparison playback
+function stopAllComparisonPlayback() {
+  comparisonPlayers.forEach(p => {
+    if (p.audio) {
+      p.audio.pause();
+      p.audio.currentTime = 0;
+      p.audio.src = '';
+    }
+  });
+  comparisonPlayers.length = 0;
+}
+
+// Setup playback controls for comparison songs
+function setupComparisonPlayback(songs) {
+  // Clear any existing players
+  comparisonPlayers.forEach(p => {
+    if (p.audio) {
+      p.audio.pause();
+      p.audio.src = '';
+    }
+  });
+  comparisonPlayers.length = 0;
+
+  songs.forEach((song, index) => {
+    const playBtn = document.getElementById(`comparisonPlayBtn${index}`);
+    const progressBar = document.getElementById(`comparisonProgress${index}`);
+
+    if (!playBtn || !progressBar) return;
+
+    // Create audio element for this song
+    const audio = new Audio(song.file_path);
+
+    const playerState = {
+      audio,
+      isPlaying: false,
+      song,
+      index,
+      playBtn,
+      progressBar
+    };
+
+    comparisonPlayers.push(playerState);
+
+    // Play button click
+    playBtn.addEventListener('click', () => {
+      if (playerState.isPlaying) {
+        audio.pause();
+        playerState.isPlaying = false;
+        playBtn.textContent = '▶';
+      } else {
+        audio.play();
+        playerState.isPlaying = true;
+        playBtn.textContent = '⏸';
+      }
+    });
+
+    // Time update
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration) {
+        const percent = (audio.currentTime / audio.duration) * 100;
+        progressBar.value = percent;
+      }
+    });
+
+    // Progress bar seek
+    progressBar.addEventListener('input', (e) => {
+      const percent = parseFloat(e.target.value);
+      audio.currentTime = (percent / 100) * audio.duration;
+    });
+
+    // Ended
+    audio.addEventListener('ended', () => {
+      playerState.isPlaying = false;
+      playBtn.textContent = '▶';
+      progressBar.value = 0;
+    });
+
+    // Pause event
+    audio.addEventListener('pause', () => {
+      playerState.isPlaying = false;
+      playBtn.textContent = '▶';
+    });
+
+    // Play event
+    audio.addEventListener('play', () => {
+      playerState.isPlaying = true;
+      playBtn.textContent = '⏸';
+    });
+  });
 }
 
 // Format file size
