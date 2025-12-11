@@ -945,7 +945,7 @@ form input:focus {
 .comparison-progress {
     flex: 1;
     height: 4px;
-    background-color: #333;
+    background: transparent;
     border-radius: 2px;
     outline: none;
     cursor: pointer;
@@ -961,6 +961,7 @@ form input:focus {
     background-color: #fff;
     border-radius: 50%;
     cursor: pointer;
+    margin-top: -4px;
 }
 
 .comparison-progress::-moz-range-thumb {
