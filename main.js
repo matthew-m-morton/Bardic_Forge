@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { getAudioFiles } = require('./src/utils/fileScanner');
 
 // Enable auto-reload for development
 if (process.argv.includes('--dev')) {
@@ -85,16 +86,24 @@ app.on('window-all-closed', () => {
 
 // IPC Handlers
 
-// File Dialog - Select Music Files
+// File Dialog - Select Music Files and/or Folders
 ipcMain.handle('dialog:selectMusicFiles', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile', 'multiSelections'],
+    properties: ['openFile', 'openDirectory', 'multiSelections'],
     filters: [
       { name: 'Audio Files', extensions: ['mp3', 'flac', 'wav', 'ogg', 'm4a', 'aac', 'wma'] },
       { name: 'All Files', extensions: ['*'] }
     ]
   });
-  return result.filePaths;
+
+  // If selection is cancelled, return empty array
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return [];
+  }
+
+  // Use fileScanner to expand directories into audio files
+  const audioFiles = getAudioFiles(result.filePaths, true);
+  return audioFiles;
 });
 
 // File Dialog - Select Music Folder
