@@ -1190,7 +1190,12 @@ async function showComparisonModal(songs) {
   }));
 
   // Build comparison table
-  table.innerHTML = buildComparisonTable(songsWithMeta);
+  const tableContainer = table.parentElement;
+  tableContainer.innerHTML = `
+    <table class="comparison-table" id="comparisonTable">
+      ${buildComparisonTable(songsWithMeta)}
+    </table>
+  `;
 
   // Add delete button event listeners
   songsWithMeta.forEach((song, index) => {
@@ -1277,13 +1282,6 @@ function buildComparisonTable(songs) {
     html += '</tr>';
   });
 
-  // Action row
-  html += '<tr><td class="field-column">Action</td>';
-  songs.forEach((_, index) => {
-    html += `<td><button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button></td>`;
-  });
-  html += '</tr>';
-
   // Playback row
   html += '<tr><td class="field-column">Playback</td>';
   songs.forEach((_, index) => {
@@ -1291,7 +1289,11 @@ function buildComparisonTable(songs) {
       <td>
         <div class="comparison-playback-controls">
           <button class="comparison-play-btn" id="comparisonPlayBtn${index}" title="Play">▶</button>
-          <input type="range" class="comparison-progress" id="comparisonProgress${index}" min="0" max="100" value="0">
+          <div class="comparison-progress-container">
+            <span class="comparison-time" id="comparisonCurrentTime${index}">0:00</span>
+            <input type="range" class="comparison-progress" id="comparisonProgress${index}" min="0" max="100" value="0">
+            <span class="comparison-time" id="comparisonTotalTime${index}">0:00</span>
+          </div>
         </div>
       </td>
     `;
@@ -1299,6 +1301,14 @@ function buildComparisonTable(songs) {
   html += '</tr>';
 
   html += '</tbody>';
+
+  // Action row (outside table, no grid)
+  html += '<div class="comparison-actions">';
+  songs.forEach((_, index) => {
+    html += `<button class="comparison-delete-btn" id="deleteComparisonSong${index}">Delete</button>`;
+  });
+  html += '</div>';
+
   return html;
 }
 
@@ -1331,6 +1341,8 @@ function setupComparisonPlayback(songs) {
   songs.forEach((song, index) => {
     const playBtn = document.getElementById(`comparisonPlayBtn${index}`);
     const progressBar = document.getElementById(`comparisonProgress${index}`);
+    const currentTimeEl = document.getElementById(`comparisonCurrentTime${index}`);
+    const totalTimeEl = document.getElementById(`comparisonTotalTime${index}`);
 
     if (!playBtn || !progressBar) return;
 
@@ -1343,7 +1355,9 @@ function setupComparisonPlayback(songs) {
       song,
       index,
       playBtn,
-      progressBar
+      progressBar,
+      currentTimeEl,
+      totalTimeEl
     };
 
     comparisonPlayers.push(playerState);
@@ -1366,7 +1380,13 @@ function setupComparisonPlayback(songs) {
       if (audio.duration) {
         const percent = (audio.currentTime / audio.duration) * 100;
         progressBar.value = percent;
+        if (currentTimeEl) currentTimeEl.textContent = formatDuration(Math.floor(audio.currentTime));
       }
+    });
+
+    // Loaded metadata - set total time
+    audio.addEventListener('loadedmetadata', () => {
+      if (totalTimeEl) totalTimeEl.textContent = formatDuration(Math.floor(audio.duration));
     });
 
     // Progress bar seek
@@ -1380,6 +1400,7 @@ function setupComparisonPlayback(songs) {
       playerState.isPlaying = false;
       playBtn.textContent = '▶';
       progressBar.value = 0;
+      if (currentTimeEl) currentTimeEl.textContent = '0:00';
     });
 
     // Pause event
