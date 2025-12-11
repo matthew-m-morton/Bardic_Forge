@@ -284,6 +284,27 @@
         </div>
     </div>
 
+    <!-- Duplicate Comparison Modal -->
+    <div class="modal" id="comparisonModal">
+        <div class="modal-content" style="max-width: 1200px; width: 95%;">
+            <div class="modal-header">
+                <h2 id="comparisonTitle">Manual Duplicate Comparison</h2>
+                <button class="close-btn" id="closeComparisonBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="comparison-container">
+                    <table class="comparison-table" id="comparisonTable">
+                        <!-- Table will be populated dynamically -->
+                    </table>
+                </div>
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button class="btn primary" id="doneComparisonBtn">Done</button>
+                    <button class="btn" id="cancelComparisonBtn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="../audio/player.js"></script>
     <script src="renderer.js"></script>
 </body>
