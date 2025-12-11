@@ -903,35 +903,50 @@ form input:focus {
     background-color: #3a2a1a;
 }
 
+
 /* Comparison playback controls */
 .comparison-playback-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 8px 0;
 }
 
 .comparison-play-btn {
-    padding: 6px 10px;
-    background-color: #1db954;
-    color: #000;
+    background: none;
+    color: #fff;
     border: none;
-    border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
-    min-width: 36px;
-    transition: background-color 0.2s;
+    font-size: 16px;
+    padding: 4px;
+    min-width: 24px;
+    transition: opacity 0.2s;
     flex-shrink: 0;
 }
 
 .comparison-play-btn:hover {
-    background-color: #1ed760;
+    opacity: 0.7;
+}
+
+.comparison-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.comparison-time {
+    font-size: 12px;
+    color: #999;
+    min-width: 35px;
+    text-align: center;
 }
 
 .comparison-progress {
     flex: 1;
-    height: 6px;
+    height: 4px;
     background-color: #333;
-    border-radius: 3px;
+    border-radius: 2px;
     outline: none;
     cursor: pointer;
     -webkit-appearance: none;
@@ -943,7 +958,7 @@ form input:focus {
     appearance: none;
     width: 12px;
     height: 12px;
-    background-color: #1db954;
+    background-color: #fff;
     border-radius: 50%;
     cursor: pointer;
 }
@@ -951,20 +966,52 @@ form input:focus {
 .comparison-progress::-moz-range-thumb {
     width: 12px;
     height: 12px;
-    background-color: #1db954;
+    background-color: #fff;
     border-radius: 50%;
     cursor: pointer;
     border: none;
 }
 
 .comparison-progress::-webkit-slider-runnable-track {
-    height: 6px;
+    height: 4px;
     background-color: #555;
-    border-radius: 3px;
+    border-radius: 2px;
 }
 
 .comparison-progress::-moz-range-track {
-    height: 6px;
+    height: 4px;
     background-color: #555;
-    border-radius: 3px;
+    border-radius: 2px;
+}
+
+/* Comparison actions row */
+.comparison-actions {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 20px 0;
+    gap: 10px;
+}
+
+.comparison-delete-btn {
+    padding: 8px 16px;
+    background-color: #555;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+    flex: 1;
+    max-width: 150px;
+}
+
+.comparison-delete-btn:hover {
+    background-color: #666;
+}
+
+.comparison-delete-btn:disabled {
+    background-color: #333;
+    cursor: not-allowed;
+    opacity: 0.5;
 }
