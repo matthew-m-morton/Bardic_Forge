@@ -384,6 +384,74 @@ function renderGroupedView(groupField) {
   }
 }
 
+// Render playlists view (show all playlists with stats)
+async function renderPlaylistsView() {
+  console.log('📋 renderPlaylistsView called, playlists count:', playlists.length);
+  songTableBody.innerHTML = '';
+
+  // Update table header for playlists view
+  const tableHeader = document.querySelector('.song-table thead tr');
+  tableHeader.innerHTML = `
+    <th class="checkbox-col"></th>
+    <th class="number-col">#</th>
+    <th class="title-col">Playlist Name</th>
+    <th class="artist-col">Songs</th>
+    <th class="album-col">Created</th>
+    <th class="length-col">Duration</th>
+  `;
+
+  if (playlists.length === 0) {
+    songTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">No playlists yet. Create one to get started!</td></tr>';
+    return;
+  }
+
+  // Get stats for each playlist
+  for (let i = 0; i < playlists.length; i++) {
+    const playlist = playlists[i];
+    const result = await window.electronAPI.db.getPlaylistSongs(playlist.playlist_id);
+
+    let songCount = 0;
+    let totalDuration = 0;
+
+    if (result.success && result.songs) {
+      songCount = result.songs.length;
+      totalDuration = result.songs.reduce((sum, song) => sum + (song.duration || 0), 0);
+    }
+
+    const row = document.createElement('tr');
+    row.dataset.playlistId = playlist.playlist_id;
+    row.style.cursor = 'pointer';
+
+    const createdDate = playlist.created_at ? new Date(playlist.created_at).toLocaleDateString() : 'Unknown';
+
+    row.innerHTML = `
+      <td class="checkbox-col"></td>
+      <td class="number-col">${i + 1}</td>
+      <td class="title-col">${escapeHtml(playlist.playlist_name)}</td>
+      <td class="artist-col">${songCount} song${songCount !== 1 ? 's' : ''}</td>
+      <td class="album-col">${createdDate}</td>
+      <td class="length-col">${formatDuration(totalDuration)}</td>
+    `;
+
+    // Click to open playlist
+    row.addEventListener('click', () => {
+      switchView('playlist', playlist.playlist_id);
+    });
+
+    // Hover effect
+    row.addEventListener('mouseenter', () => {
+      row.style.backgroundColor = '#2a2a2a';
+    });
+    row.addEventListener('mouseleave', () => {
+      row.style.backgroundColor = '';
+    });
+
+    songTableBody.appendChild(row);
+  }
+
+  console.log(`📋 Rendered ${playlists.length} playlists`);
+}
+
 // Toggle group expansion
 function toggleGroupExpansion(groupName, groupField) {
   const wasExpanded = expandedSections.has(groupName);
@@ -503,6 +571,12 @@ async function switchView(view, playlistId = null) {
     playlistBanner.style.display = 'none';
     filteredSongs = [...allSongs];
     renderGroupedView('artist');
+  } else if (view === 'playlists') {
+    console.log('📋 Switching to Playlists view');
+    document.querySelector('[data-view="playlists"]').classList.add('active');
+    viewTitle.textContent = 'Playlists';
+    playlistBanner.style.display = 'none';
+    await renderPlaylistsView();
   } else if (view === 'playlist' && playlistId) {
     const playlist = playlists.find(p => p.playlist_id === playlistId);
     if (playlist) {
@@ -630,6 +704,8 @@ function clearSelection() {
     renderGroupedView('album');
   } else if (currentView === 'artists') {
     renderGroupedView('artist');
+  } else if (currentView === 'playlists') {
+    renderPlaylistsView();
   } else {
     renderSongs();
   }
