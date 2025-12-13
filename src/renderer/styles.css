@@ -89,6 +89,21 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.nav-item:hover .nav-label {
+    animation: scrollText 8s linear 0.5s infinite;
+}
+
+@keyframes scrollText {
+    0%, 10% {
+        transform: translateX(0);
+    }
+    90%, 100% {
+        transform: translateX(calc(-100% + 180px));
+    }
 }
 
 .nav-section {
