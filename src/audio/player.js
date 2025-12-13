@@ -13,7 +13,11 @@ class AudioPlayer {
     this.isPlaying = false;
     this.isShuffle = false;
     this.repeatMode = 'none'; // 'none', 'one', 'all'
-    
+
+    // Shuffle memory (75% of playlist length, rolling window)
+    this.shuffleMemory = [];
+    this.shuffleMemoryMaxSize = 0;
+
     // Event listeners
     this.onPlayCallback = null;
     this.onPauseCallback = null;
@@ -21,7 +25,7 @@ class AudioPlayer {
     this.onTimeUpdateCallback = null;
     this.onLoadedCallback = null;
     this.onErrorCallback = null;
-    
+
     this.setupEventListeners();
   }
   
@@ -161,6 +165,10 @@ class AudioPlayer {
    */
   setPlaylist(songs) {
     this.playlist = songs;
+    // Update shuffle memory size (75% of playlist length)
+    this.shuffleMemoryMaxSize = Math.floor(songs.length * 0.75);
+    // Reset shuffle memory when playlist changes
+    this.shuffleMemory = [];
   }
   
   /**
@@ -180,10 +188,35 @@ class AudioPlayer {
    */
   next() {
     if (this.playlist.length === 0) return;
-    
+
     if (this.isShuffle) {
-      // Random next song
-      const randomIndex = Math.floor(Math.random() * this.playlist.length);
+      // Get list of available songs (not in memory)
+      const availableIndices = [];
+      for (let i = 0; i < this.playlist.length; i++) {
+        if (!this.shuffleMemory.includes(i)) {
+          availableIndices.push(i);
+        }
+      }
+
+      // If no available songs (all in memory), reset memory
+      if (availableIndices.length === 0) {
+        this.shuffleMemory = [];
+        for (let i = 0; i < this.playlist.length; i++) {
+          availableIndices.push(i);
+        }
+      }
+
+      // Pick random from available songs
+      const randomIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+
+      // Add to shuffle memory
+      this.shuffleMemory.push(randomIndex);
+
+      // Remove oldest entry if memory is full (rolling window)
+      if (this.shuffleMemory.length > this.shuffleMemoryMaxSize) {
+        this.shuffleMemory.shift(); // Remove first (oldest) element
+      }
+
       this.playSongAtIndex(randomIndex);
     } else {
       // Sequential next
